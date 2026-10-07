@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+timm
+Pillow
+numpy
+opencv-python-headless
+python-multipart
+pytest
+httpx
+pydantic
+torch --index-url https://download.pytorch.org/whl/cpu
+torchvision --index-url https://download.pytorch.org/whl/cpu
+torchaudio --index-url https://download.pytorch.org/whl/cpu
+matplotlib

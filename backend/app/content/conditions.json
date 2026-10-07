@@ -1,0 +1,117 @@
+{
+  "__meta__": {
+    "disclaimer": "Drafted by AI from public sources. Must be reviewed by a qualified clinician before real-world use."
+  },
+  "akiec": {
+    "name": "Actinic keratosis / squamous cell carcinoma in situ group",
+    "overview": "Actinic keratosis (AK) is a common pre-cancerous skin growth caused by sun damage. Squamous cell carcinoma in situ (Bowen's disease) is an early form of skin cancer confined to the top layer of the skin. They are grouped together because they share similar causes and appearances.",
+    "what_it_is": "A localized area of abnormal skin cells triggered by long-term ultraviolet (UV) exposure. It is not an invasive cancer, but it has the potential to become one over time.",
+    "causes_risks": "Prolonged sun exposure, using indoor tanning beds, having fair skin, a weakened immune system, and increasing age.",
+    "symptoms_signs": "Small, dry, scaly, or crusty patches of skin. They may be pink, red, or the same color as your skin. Sometimes they feel like sandpaper and may itch, burn, or occasionally bleed.",
+    "doctor_assessment": "A doctor will typically perform a physical examination. They often use a dermatoscope (a lighted magnifying tool) to look closely at the lesion. In some cases, a small biopsy may be taken to confirm the nature of the growth.",
+    "what_to_expect": "Your appointment will likely involve a visual check. If treatment is recommended, it can often be done quickly in the clinic.",
+    "treatment": "Treatments aim to remove the abnormal cells. Options include freezing (cryotherapy), scraping, applying prescription creams that treat the skin cells, or rarely, light therapy (photodynamic therapy).",
+    "what_can_you_do": "Take clear photos with a ruler next to the spot to track changes. Practice strict sun protection, wear protective clothing, and avoid picking or scratching the area.",
+    "urgent_care": "Seek prompt medical advice if the spot grows rapidly, bleeds heavily, becomes very painful, or starts to form a raised hard lump or open sore that does not heal.",
+    "links": [
+      "https://www.aad.org/public/diseases/skin-cancer/actinic-keratosis",
+      "https://www.nhs.uk/conditions/actinic-keratoses/"
+    ]
+  },
+  "bcc": {
+    "name": "Basal cell carcinoma",
+    "overview": "Basal cell carcinoma (BCC) is the most common form of skin cancer. It grows slowly and almost never spreads to other parts of the body, but it can grow deeply and damage surrounding tissue if left untreated.",
+    "what_it_is": "A type of skin cancer that begins in the basal cells, which produce new skin cells as old ones die. It is driven by accumulated UV radiation.",
+    "causes_risks": "Intense, intermittent sun exposure and frequent sunburns, fair skin, older age, and a history of previous skin cancers.",
+    "symptoms_signs": "Often appears as a pearly or waxy bump, a flat, flesh-colored or brown scar-like lesion, or a bleeding or scabbing sore that heals and returns.",
+    "doctor_assessment": "A clinician will examine the spot, often with a dermatoscope. A biopsy is usually required, where a small piece or all of the bump is removed and examined under a microscope.",
+    "what_to_expect": "The visit is straightforward. The doctor will evaluate the lesion and may perform a quick numbing injection for a biopsy if needed.",
+    "treatment": "BCCs are highly treatable. Standard therapies include surgical removal, scraping and burning (curettage and electrodessication), or using specialized medical creams for superficial types.",
+    "what_can_you_do": "Keep a photo record of the spot with a ruler for scale. Protect the area and all exposed skin from the sun. Do not try to treat it with home remedies.",
+    "urgent_care": "Urgency is less immediate than for other skin cancers due to slow growth, but see a doctor soon if it is bleeding, crusting rapidly, or expanding noticeably.",
+    "links": [
+      "https://www.skincancer.org/skin-cancer-information/basal-cell-carcinoma/",
+      "https://www.cancerresearchuk.org/about-cancer/skin-cancer/types/basal-cell-carcinoma-bcc"
+    ]
+  },
+  "bkl": {
+    "name": "Benign keratosis group",
+    "overview": "This group primarily includes seborrheic keratoses, which are very common, harmless skin growths that many people develop as they age.",
+    "what_it_is": "A non-cancerous overgrowth of the top layer of skin cells. They can look concerning but they never turn into skin cancer.",
+    "causes_risks": "The exact cause is unknown, but genetics (family history) and increasing age are the primary factors. They are not caused by the sun.",
+    "symptoms_signs": "Round or oval growths that often look \"stuck on\" to the skin. They can range in color from light tan to black and often have a waxy or rough texture.",
+    "doctor_assessment": "Usually diagnosed by appearance alone. A doctor or dermatologist can confidently identify them without needing a biopsy in most cases.",
+    "what_to_expect": "Typically, you and the doctor will just discuss them to reassure you. No intervention is needed.",
+    "treatment": "Treatment is usually unnecessary unless they become irritated by clothing or are cosmetically bothersome. In that case, they can be easily frozen off or scraped away by a professional.",
+    "what_can_you_do": "Monitor them occasionally. Avoid picking at them, as this can cause them to bleed or become irritated.",
+    "urgent_care": "Seek care if a growth considered a keratosis suddenly changes color rapidly, becomes itchy out of nowhere, or bleeds without provocation, to ensure it is not a different condition.",
+    "links": [
+      "https://www.aad.org/public/diseases/a-z/seborrheic-keratoses-overview",
+      "https://www.nhs.uk/conditions/seborrhoeic-keratosis/"
+    ]
+  },
+  "df": {
+    "name": "Dermatofibroma",
+    "overview": "A dermatofibroma is a very common, harmless skin growth. They are firm bumps that often appear on the lower legs.",
+    "what_it_is": "An overgrowth of the fibrous tissue in the skin. They are completely benign (not cancer) and usually persist indefinitely.",
+    "causes_risks": "Often they develop after a minor skin injury, like a bug bite, a thorn prick, or a shaving cut, though sometimes they appear without a clear reason.",
+    "symptoms_signs": "A firm, often small bump that can be pink, red, or brown. When squeezed from the sides, it often dimples inward (the \"dimple sign\").",
+    "doctor_assessment": "A doctor can usually diagnose it by feeling its firm texture and checking for the dimple sign, sometimes aided by looking at it closely with a dermatoscope.",
+    "what_to_expect": "A clinical skin check is standard. Reassurance is the primary outcome.",
+    "treatment": "They rarely require treatment. If one is painful or bothersome, it can be surgically removed, but the resulting scar is often more noticeable than the original bump.",
+    "what_can_you_do": "Leave it alone and avoid irritating it. Recognize that it is a stable, non-growing mark.",
+    "urgent_care": "Not an urgent condition. However, if a spot you think is a dermatofibroma suddenly starts to grow rapidly, ulcerate, or change significantly, have it examined.",
+    "links": [
+      "https://dermnetnz.org/topics/dermatofibroma",
+      "https://www.bad.org.uk/for-the-public/patient-information-leaflets/dermatofibroma"
+    ]
+  },
+  "mel": {
+    "name": "Melanoma",
+    "overview": "Melanoma is a serious type of skin cancer. It is less common than other skin cancers but much more dangerous because it can spread rapidly to other organs if not caught early.",
+    "what_it_is": "Cancer that develops from melanocytes, the cells that produce the pigment (melanin) giving skin its color. It can form in a new spot or develop within an existing mole.",
+    "causes_risks": "High levels of UV exposure, especially intense, blistering sunburns. People with many moles, atypical moles, a family history of melanoma, or fair skin are at higher risk.",
+    "symptoms_signs": "A new, unusual growth or a change in an existing mole. Follow the ABCDE rule: Asymmetry, Border irregularity, Color changes, Diameter over 6mm, and Evolving shape or size. The \"ugly duckling\" sign (a mole that looks different from all your others) is also a key marker.",
+    "doctor_assessment": "Requires a very close physical exam. A specialized device (dermatoscope) is almost always used. If melanoma is suspected, a swift biopsy is mandatory to check the cells.",
+    "what_to_expect": "The doctor will prioritize evaluating the spot and is likely to arrange a timely biopsy. You will be scheduled for a rapid follow-up.",
+    "treatment": "The primary treatment is surgical removal of the melanoma and some surrounding normal tissue. Further treatments depend on how deeply the melanoma has grown.",
+    "what_can_you_do": "Act quickly. Photograph the spot with a ruler for the doctor. Secure an appointment. Avoid any sun exposure and do not attempt to self-treat.",
+    "urgent_care": "Any suspected melanoma should be reviewed by a professional soon. It is especially urgent if the lesion is growing fast, bleeding, or weeping.",
+    "links": [
+      "https://www.aad.org/public/diseases/skin-cancer/melanoma",
+      "https://www.nhs.uk/conditions/melanoma-skin-cancer/"
+    ]
+  },
+  "nv": {
+    "name": "Melanocytic nevus (Mole)",
+    "overview": "A melanocytic nevus is commonly known as a mole. Almost everyone has them. They are benign and entirely normal skin features.",
+    "what_it_is": "A localized cluster of pigment-producing cells (melanocytes). Most moles appear during childhood and young adulthood.",
+    "causes_risks": "Genetics dictates how many moles a person will have. Sun exposure during childhood can also increase the number of moles that develop.",
+    "symptoms_signs": "Usually small, uniformly colored (brown, tan, or pink), well-defined edges, and a consistent shape. They typically remain stable over a lifetime.",
+    "doctor_assessment": "Evaluated through an exam (often comparing the moles to one another). The doctor checks that all moles look similar and lack the ABCDE danger signs.",
+    "what_to_expect": "Routine screening. If a mole looks typical, no action is taken.",
+    "treatment": "Moles do not need treatment unless they show atypical features that raise suspicion of melanoma, or if they are repeatedly snagged and irritated.",
+    "what_can_you_do": "Get to know your moles. Perform regular self-exams to notice if a new one appears or an existing one changes shape, color, or size.",
+    "urgent_care": "Urgency only applies if the mole begins to actively change, itch, bleed, or stand out as an \"ugly duckling\" compared to your other moles.",
+    "links": [
+      "https://www.aad.org/public/diseases/a-z/moles-overview",
+      "https://www.mayoclinic.org/diseases-conditions/moles/symptoms-causes/syc-20375200"
+    ]
+  },
+  "vasc": {
+    "name": "Vascular lesion",
+    "overview": "This group covers benign blood vessel growths, such as cherry angiomas or pyogenic granulomas. Cherry angiomas are very common small red bumps that appear mainly on the torso.",
+    "what_it_is": "An overgrowth of small blood vessels or capillaries near the surface of the skin. They are harmless.",
+    "causes_risks": "Cherry angiomas are largely driven by aging and genetics. Pyogenic granulomas often arise quickly after a minor injury.",
+    "symptoms_signs": "Typically range from bright red to purple. They do not turn brown or black unless they thrombose (clot). They tend to be small and harmless, though some can bleed easily if bumped.",
+    "doctor_assessment": "Easily identified visually by a doctor due to their distinct red, vascular appearance. A dermatoscope confirms the collection of tiny blood vessels.",
+    "what_to_expect": "Reassurance in most cases. If there is rapid growth (like a pyogenic granuloma), it might prompt minor intervention.",
+    "treatment": "Cherry angiomas require no treatment. If a vascular lesion bleeds frequently or is cosmetically bothersome, it can be treated with lasers, electrosurgery, or simple removal.",
+    "what_can_you_do": "Make a note of it and avoid scratching, as they consist of blood vessels and will bleed heavily if ruptured.",
+    "urgent_care": "Seek care if a red bump starts bleeding heavily and recurrently on its own, or if it grows extremely fast over a few weeks.",
+    "links": [
+      "https://dermnetnz.org/topics/cherry-angioma",
+      "https://www.aocd.org/page/CherryAngiomas"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+# Python
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+test_result.json
+
+# Node/React
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Models & Media (Do not ignore models/best.pt unless necessary. We should keep models/best.pt but ignore generated docs/test files)
+# If the model is huge, usually we put it in git lfs, but for now we won't ignore it to make it self-contained if the user meant to commit it, but wait, if it's over 100MB github rejects it. A typical efficientnet is ~20MB, so it should be fine.
+*.jpg
+*.jpeg
+*.png
+*.webp
+!docs/*.png
+
+# OS
+.DS_Store
+Thumbs.db
