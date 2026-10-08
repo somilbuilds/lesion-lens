@@ -16,12 +16,16 @@ from app.config import config
 
 app = FastAPI()
 
-# Allow CORS for frontend
+# Allow local frontend during development/demo, plus the previous Render frontend.
+frontend_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://lesion-lens-1.onrender.com",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://lesion-lens-1.onrender.com",
-    ],
+    allow_origins=frontend_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
