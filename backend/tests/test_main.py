@@ -45,6 +45,7 @@ def test_probabilities_sum_to_1(monkeypatch):
     
     skin_model = SkinModel("nonexistent")
     skin_model.model = MockModel()
+    skin_model.generate_gradcam = lambda t, c: np.zeros((224, 224), dtype=np.float32)
 
     img = create_test_image()
     res = skin_model.analyze_image(img, {})
