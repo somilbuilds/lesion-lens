@@ -18,7 +18,7 @@
 
 ---
 
-> **⚠️ Disclaimer:** This is a research prototype, not a medical device. It should never be used as a substitute for professional medical advice, diagnosis, or treatment.
+> **⚠️ Disclaimer:** This is a research prototype/demo system, not a medical device. It should never be used as a substitute for professional medical advice, diagnosis, or treatment. It does not provide clinical validation.
 
 ## 📖 Overview
 
@@ -28,8 +28,8 @@ SkinLesionNet is a fully-integrated full-stack web application wrapped around a 
 - **Intelligent Analysis**: Rejects blurry/non-skin images and measures clinical risk grouping (Malignant, Pre-cancerous, Benign).
 - **Test-Time Augmentation (TTA)**: Employs 4 views (original + flips) for robust certainty checks and metric pooling.
 - **Explainable AI (Grad-CAM)**: Heatmap highlighting model-influenced image regions, verified with custom focus contouring.
-- **Localization**: Supports dynamic `English` and `Hindi` language modes instantly via Context APIs.
-- **Dark & Light Mode**: Accessible dual-color themes strictly built using vanilla CSS semantic variables.
+- **Localization**: Supports dynamic `English` and `Hindi` globally persisting across Analysis workflow.
+- **Dark & Light Mode**: Accessible dual-color themes strictly built using vanilla CSS semantic variables, avoiding hardcoded UI colors.
 
 ---
 
@@ -38,36 +38,35 @@ SkinLesionNet is a fully-integrated full-stack web application wrapped around a 
 The project maintains a sharp decoupled structure:
 
 1. **Backend** `/backend`: FastAPI microservice serving the CPU-bound PyTorch model via endpoints `/api/analyze` and `/api/model-info`. Employs custom Grad-CAM overlays and OpenCV image manipulation algorithms.
-2. **Frontend** `/frontend`: Vite `React+TypeScript` SPA enforcing WCAG AA contrast. Uses standard `lucide-react` semantics.
+2. **Frontend** `/frontend`: Vite `React+TypeScript` SPA enforcing WCAG AA contrast.
 3. **ML Pipeline** `/models`: Centralized store for the `best.pt` model state dictionary weights alongside experimental metric logs.
 
 ---
 
 ## 📊 Model & Metrics
 
-Built around `timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)`, this model was extensively trained utilizing datasets combining **HAM10000** (Austrian/Australian dermoscopy) and **PAD-UFES-20** (Brazilian smartphone pictures).
+Built around `timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)`, this model was extensively trained utilizing the **ISIC 2019** dataset to distinguish between the following 7 diagnostic classes. Checkpoint chosen is Epoch 24.
 
 | Metric | Score |
 | :--- | :--- |
-| **Accuracy** | 79.4% |
-| **Balanced Accuracy** | 74.4% |
-| **Macro AUC** | 0.943 |
-| **Macro F1** | 0.690 |
-| **Melanoma Precision** | 47.0% |
+| **Accuracy** | 86.31% |
+| **Balanced Accuracy** | 85.88% |
+| **Macro AUC** | 0.9668 |
+| **Macro F1** | 0.8144 |
 
-### Per-Class Recall Table (1,203 held-out test images)
+### Per-Class Recall Table
 
 | Class | Scientific Name | Recall Score | Risk Group |
 |:---|:---|:---:|:---:|
-| **AKIEC** | Actinic Keratoses / SCC in situ | `67.0%` | Pre-cancerous |
-| **BCC** | Basal Cell Carcinoma | `79.0%` | Malignant |
-| **BKL** | Benign Keratosis | `57.0%` | Benign |
-| **DF** | Dermatofibroma | `100.0%` | Benign |
-| **MEL** | Melanoma | `59.0%` | Malignant |
-| **NV** | Melanocytic Nevus | `88.0%` | Benign |
-| **VASC** | Vascular Lesion | `71.0%` | Benign |
+| **AKIEC** | Actinic Keratosis / SCC in situ | `84.56%` | Pre-cancerous |
+| **BCC** | Basal Cell Carcinoma | `92.49%` | Malignant |
+| **BKL** | Benign Keratosis | `76.43%` | Benign |
+| **DF** | Dermatofibroma | `87.50%` | Benign |
+| **MEL** | Melanoma | `78.76%` | Malignant |
+| **NV** | Melanocytic Nevus | `89.44%` | Benign |
+| **VASC** | Vascular Lesion | `92.00%` | Benign |
 
-> **Crucial Weakness Check (Melanoma)**: The model precision is 47%. Of 112 true melanomas, 31 were predicted as nevus, highlighting the necessity to always consult a professional for dynamically changing moles.
+> **Crucial Weakness Check**: Performance outside the dataset/domain is not guaranteed. 
 
 ---
 

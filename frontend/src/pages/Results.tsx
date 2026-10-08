@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { AlertTriangle, Info, Printer } from 'lucide-react';
+import { useAppContext } from '../Context';
+import { translations } from '../i18n';
 
 export default function Results({ result, imageFile, symptoms }: { result: any, imageFile: File | null, symptoms: any }) {
   const [opacity, setOpacity] = useState(0.5);
   const [showOutline, setShowOutline] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   
-  if (!result) return <div>No result</div>;
+  if (!result) return <div>{translations['en'].noResult}</div>;
+
+  const { lang } = useAppContext();
+  const t = translations[lang];
 
   const { input_check, top3, inconclusive, uncertainty, risk, gradcam, outline, content, guidance } = result;
 
@@ -21,7 +26,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
     <div className="results-page">
       {input_check?.level === 'reject' ? (
         <div className="card tier-urgent">
-          <h3>Analysis Rejected</h3>
+          <h3>{t.analysisRejected}</h3>
           <ul>
             {input_check.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
           </ul>
@@ -31,11 +36,11 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
           {/* Left Column: Image Viewer */}
           <div>
             <div className="card">
-              <div className="viewer" style={{ backgroundColor: '#F3F4F6', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <div className="viewer" style={{ backgroundColor: 'var(--bg-subtle)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {imageFile ? (
                   <img src={URL.createObjectURL(imageFile)} alt="Original" />
                 ) : (
-                  <span style={{ color: '#9CA3AF' }}>Image Error</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Image Error</span>
                 )}
                 {gradcam && (
                   <img 
@@ -49,7 +54,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                     <polygon 
                       points={outline.polygon.map((p: number[]) => `${p[0]},${p[1]}`).join(' ')} 
                       fill="none" 
-                      stroke="#2563EB" 
+                      stroke="var(--accent)" 
                       strokeWidth="0.01"
                       strokeDasharray="0.02, 0.01"
                     />
@@ -59,17 +64,17 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               
               <div style={{ marginTop: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
-                  <span style={{ fontSize: '14px' }}>Highlight</span>
+                  <span style={{ fontSize: '14px' }}>{t.highlight}</span>
                   <input type="range" min="0" max="1" step="0.1" value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} style={{ flex: 1 }} />
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
                   <input type="checkbox" checked={showOutline} onChange={(e) => setShowOutline(e.target.checked)} />
-                  <span style={{ fontSize: '14px' }}>Outline</span>
+                  <span style={{ fontSize: '14px' }}>{t.outline}</span>
                 </label>
               </div>
               
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>
-                Highlighted areas influenced the model's score. They show where the model looked, not why a lesion is or is not dangerous.
+                {t.highlightDesc}
               </p>
               {showOutline && (
                 <p style={{ fontSize: '12px', color: 'var(--accent)' }}>{outline?.method}</p>
@@ -87,7 +92,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
             {input_check?.level === 'warning' && (
               <div className="card" style={{ backgroundColor: 'var(--warning-bg)', borderLeft: '4px solid var(--warning-color)' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--warning-color)', fontWeight: 600, marginBottom: '8px' }}>
-                  <AlertTriangle size={18} /> Image Warning
+                  <AlertTriangle size={18} /> {t.imageWarning}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '24px', fontSize: '14px' }}>
                   {input_check.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
@@ -96,20 +101,20 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
             )}
 
             {inconclusive ? (
-              <div className="card" style={{ backgroundColor: '#F3F4F6' }}>
-                <h3 style={{ fontSize: '24px', marginBottom: '8px' }}>Inconclusive Result</h3>
-                <p>The model could not confidently match this image to a single condition.</p>
+              <div className="card" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                <h3 style={{ fontSize: '24px', marginBottom: '8px' }}>{t.inconclusiveResult}</h3>
+                <p>{t.inconclusiveDesc}</p>
               </div>
             ) : (
               <div className="card">
                 <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>
-                  The model's top match
+                  {t.topMatchLabel}
                 </p>
                 <h3 style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--text-main)' }}>
-                  {content?.[topConditionKey]?.name || topConditionKey}
+                  {t[topConditionKey as keyof typeof t] || content?.[topConditionKey]?.name || topConditionKey}
                 </h3>
                 <p style={{ fontSize: '14px' }}>
-                  Uncertainty Level: <strong>{uncertainty?.level.toUpperCase()}</strong>
+                  {t.uncertaintyLevel}: <strong>{uncertainty?.level.toUpperCase()}</strong>
                 </p>
               </div>
             )}
@@ -117,7 +122,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
             <div className={`card tier-${risk?.tier === 'urgent_review' ? 'urgent' : risk?.tier === 'see_doctor_soon' ? 'soon' : 'routine'}`}>
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Info size={18} /> 
-                {risk?.tier === 'urgent_review' ? 'Urgent Review Advised' : risk?.tier === 'see_doctor_soon' ? 'See Doctor Soon' : 'Routine Monitoring'}
+                {risk?.tier === 'urgent_review' ? t.urgentReviewAd : risk?.tier === 'see_doctor_soon' ? t.seeDoctorSoon : t.routineMonitoring}
               </h4>
               <ul style={{ margin: 0, paddingLeft: '24px', fontSize: '14px' }}>
                 {risk?.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
@@ -130,7 +135,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               {top3?.map((t: any) => (
                 <div key={t.class} style={{ marginBottom: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                    <span>{content?.[t.class]?.name || t.class}</span>
+                    <span>{t[t.class as keyof typeof t] || content?.[t.class]?.name || t.class}</span>
                     <span>{(t.prob * 100).toFixed(1)}%</span>
                   </div>
                   <div className="progress-bar">
@@ -139,18 +144,18 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                 </div>
               ))}
               
-              <h4 style={{ marginTop: '24px' }}>Risk Groups</h4>
+              <h4 style={{ marginTop: '24px' }}>{t.riskGroups}</h4>
               <div style={{ display: 'flex', gap: '16px', fontSize: '12px', textAlign: 'center' }}>
-                <div style={{ flex: 1, padding: '8px', backgroundColor: '#FEE2E2', borderRadius: '6px' }}>
-                  <strong>Malignant</strong><br />
+                <div style={{ flex: 1, padding: '8px', backgroundColor: 'var(--tier-urgent-bg)', borderRadius: '6px', color: 'var(--text-main)' }}>
+                  <strong>{t.malignant}</strong><br />
                   {(risk?.group_probs?.malignant * 100).toFixed(1)}%
                 </div>
-                <div style={{ flex: 1, padding: '8px', backgroundColor: '#FEF3C7', borderRadius: '6px' }}>
-                  <strong>Pre-cancerous</strong><br />
+                <div style={{ flex: 1, padding: '8px', backgroundColor: 'var(--tier-soon-bg)', borderRadius: '6px', color: 'var(--text-main)' }}>
+                  <strong>{t.precancerous}</strong><br />
                   {(risk?.group_probs?.precancerous * 100).toFixed(1)}%
                 </div>
-                <div style={{ flex: 1, padding: '8px', backgroundColor: '#D1FAE5', borderRadius: '6px' }}>
-                  <strong>Benign</strong><br />
+                <div style={{ flex: 1, padding: '8px', backgroundColor: 'var(--tier-routine-bg)', borderRadius: '6px', color: 'var(--text-main)' }}>
+                  <strong>{t.benign}</strong><br />
                   {(risk?.group_probs?.benign * 100).toFixed(1)}%
                 </div>
               </div>
@@ -163,47 +168,47 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
         <>
           <div className="card" style={{ marginTop: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>Learn About: </h3>
+              <h3 style={{ margin: 0 }}>{t.learnAbout} </h3>
               <select value={selectedCondition} onChange={(e) => setSelectedCondition(e.target.value)} style={{ width: 'auto', margin: 0 }}>
                 {Object.keys(content || {}).filter(k => k !== '__meta__').map(k => (
-                  <option key={k} value={k}>{content[k].name}</option>
+                  <option key={k} value={k}>{t[k as keyof typeof t] || content[k].name}</option>
                 ))}
               </select>
             </div>
             
             <div className="tabs" style={{ marginTop: '16px' }}>
-              <div className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</div>
-              <div className={`tab ${activeTab === 'causes' ? 'active' : ''}`} onClick={() => setActiveTab('causes')}>Causes & Risks</div>
-              <div className={`tab ${activeTab === 'symptoms' ? 'active' : ''}`} onClick={() => setActiveTab('symptoms')}>Symptoms & Signs</div>
-              <div className={`tab ${activeTab === 'doctor' ? 'active' : ''}`} onClick={() => setActiveTab('doctor')}>Doctor Visit</div>
-              <div className={`tab ${activeTab === 'action' ? 'active' : ''}`} onClick={() => setActiveTab('action')}>What You Can Do</div>
+              <div className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>{t.overview}</div>
+              <div className={`tab ${activeTab === 'causes' ? 'active' : ''}`} onClick={() => setActiveTab('causes')}>{t.causesRisks}</div>
+              <div className={`tab ${activeTab === 'symptoms' ? 'active' : ''}`} onClick={() => setActiveTab('symptoms')}>{t.symptomsSigns}</div>
+              <div className={`tab ${activeTab === 'doctor' ? 'active' : ''}`} onClick={() => setActiveTab('doctor')}>{t.doctorVisit}</div>
+              <div className={`tab ${activeTab === 'action' ? 'active' : ''}`} onClick={() => setActiveTab('action')}>{t.whatYouCanDo}</div>
             </div>
             
             <div style={{ fontSize: '15px' }}>
               {activeTab === 'overview' && (
                 <>
-                  <p><strong>Overview:</strong> {conditionData.overview}</p>
-                  <p><strong>What it is:</strong> {conditionData.what_it_is}</p>
+                  <p><strong>{t.overview}:</strong> {conditionData.overview}</p>
+                  <p><strong>{t.whatItIs}</strong> {conditionData.what_it_is}</p>
                 </>
               )}
               {activeTab === 'causes' && <p>{conditionData.causes_risks}</p>}
               {activeTab === 'symptoms' && <p>{conditionData.symptoms_signs}</p>}
               {activeTab === 'doctor' && (
                 <>
-                  <p><strong>Assessment:</strong> {conditionData.doctor_assessment}</p>
-                  <p><strong>What to expect:</strong> {conditionData.what_to_expect}</p>
-                  <p><strong>Treatment:</strong> {conditionData.treatment}</p>
+                  <p><strong>{t.assessment}</strong> {conditionData.doctor_assessment}</p>
+                  <p><strong>{t.whatToExpect}</strong> {conditionData.what_to_expect}</p>
+                  <p><strong>{t.treatment}</strong> {conditionData.treatment}</p>
                 </>
               )}
               {activeTab === 'action' && (
                 <>
                   <p>{conditionData.what_can_you_do}</p>
-                  <p style={{ color: 'var(--tier-urgent)' }}><strong>When to seek urgent care:</strong> {conditionData.urgent_care}</p>
+                  <p style={{ color: 'var(--tier-urgent)' }}><strong>{t.urgentCare}</strong> {conditionData.urgent_care}</p>
                 </>
               )}
               
               <div style={{ marginTop: '16px', fontSize: '12px' }}>
-                <strong>Sources:</strong>
+                <strong>{t.sources}</strong>
                 <ul style={{ paddingLeft: '16px' }}>
                   {conditionData.links?.map((l: string, i: number) => (
                     <li key={i}><a href={l} target="_blank" rel="noreferrer">{l}</a></li>
@@ -213,42 +218,42 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
             </div>
           </div>
 
-          <div className="card" style={{ backgroundColor: '#F8FAFC' }}>
+          <div className="card" style={{ backgroundColor: 'var(--bg-lighter)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0 }}>Prepare for your appointment</h3>
+              <h3 style={{ margin: 0 }}>{t.prepAppointment}</h3>
               <button className="secondary" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                <Printer size={16} /> Print / Save PDF
+                <Printer size={16} /> {t.printSave}
               </button>
             </div>
             
             <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '1fr 1fr' }}>
               <div>
-                <p style={{ fontWeight: 600, marginBottom: '8px' }}>Checklist to bring:</p>
+                <p style={{ fontWeight: 600, marginBottom: '8px' }}>{t.checklistBring}</p>
                 <ul style={{ paddingLeft: '20px', fontSize: '14px', lineHeight: 1.6 }}>
-                  <li>When you first noticed the spot</li>
-                  <li>Any changes you have seen (size, shape, color)</li>
-                  <li>Symptoms (itching, bleeding, pain)</li>
-                  <li>Family history of skin cancer</li>
-                  <li>Your history of sun exposure and sunburns</li>
-                  <li>Current medicines you take</li>
-                  <li>Questions to ask the doctor</li>
+                  <li>{t.checklist1}</li>
+                  <li>{t.checklist2}</li>
+                  <li>{t.checklist3}</li>
+                  <li>{t.checklist4}</li>
+                  <li>{t.checklist5}</li>
+                  <li>{t.checklist6}</li>
+                  <li>{t.checklist7}</li>
                 </ul>
               </div>
               
-              <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Your Notes:</p>
+              <div style={{ backgroundColor: 'var(--Surface)', padding: '16px', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{t.yourNotes}</p>
                 {guidance?.map((g: string, i: number) => <p key={i} style={{ fontSize: '13px', margin: '4px 0' }}>• {g}</p>)}
-                <p style={{ fontSize: '13px', margin: '4px 0' }}>• Age: {symptoms?.age || 'Not provided'}, Sex: {symptoms?.sex || 'Not provided'}</p>
+                <p style={{ fontSize: '13px', margin: '4px 0' }}>
+                  • {t.age}: {symptoms?.age || t.notProvided}, {t.sex}: {symptoms?.sex ? t[symptoms.sex as keyof typeof t] || symptoms.sex : t.notProvided}
+                </p>
               </div>
             </div>
           </div>
           
-          <div style={{ textAlign: 'center', padding: '24px', backgroundColor: '#FEE2E2', borderRadius: '8px', color: '#991B1B' }}>
-            <h4 style={{ marginBottom: '8px' }}>Important Medical Notice</h4>
-            <p style={{ fontSize: '14px', margin: 0 }}>
-              If in doubt, see a doctor or dermatologist immediately. Urgent signs include rapid growth, bleeding, or a spot that looks entirely different from your other moles (the "ugly duckling").
-              <br/><br/>
-              <strong>[Placeholder for local emergency / urgent care contact]</strong>
+          <div style={{ textAlign: 'center', padding: '24px', backgroundColor: 'var(--error-bg)', borderRadius: '8px', color: 'var(--error-color)' }}>
+            <h4 style={{ marginBottom: '8px' }}>{t.importantMedicalNotice}</h4>
+            <p style={{ fontSize: '14px', margin: 0, whiteSpace: 'pre-wrap' }}>
+              {t.importantMedicalNoticeDesc}
             </p>
           </div>
         </>

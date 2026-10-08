@@ -3,7 +3,7 @@
     "disclaimer": "Drafted by AI from public sources. Must be reviewed by a qualified clinician before real-world use."
   },
   "akiec": {
-    "name": "Actinic keratosis / squamous cell carcinoma in situ group",
+    "name": "Actinic keratosis / SCC in situ",
     "overview": "Actinic keratosis (AK) is a common pre-cancerous skin growth caused by sun damage. Squamous cell carcinoma in situ (Bowen's disease) is an early form of skin cancer confined to the top layer of the skin. They are grouped together because they share similar causes and appearances.",
     "what_it_is": "A localized area of abnormal skin cells triggered by long-term ultraviolet (UV) exposure. It is not an invasive cancer, but it has the potential to become one over time.",
     "causes_risks": "Prolonged sun exposure, using indoor tanning beds, having fair skin, a weakened immune system, and increasing age.",
@@ -35,7 +35,7 @@
     ]
   },
   "bkl": {
-    "name": "Benign keratosis group",
+    "name": "Benign keratosis",
     "overview": "This group primarily includes seborrheic keratoses, which are very common, harmless skin growths that many people develop as they age.",
     "what_it_is": "A non-cancerous overgrowth of the top layer of skin cells. They can look concerning but they never turn into skin cancer.",
     "causes_risks": "The exact cause is unknown, but genetics (family history) and increasing age are the primary factors. They are not caused by the sun.",
@@ -83,7 +83,7 @@
     ]
   },
   "nv": {
-    "name": "Melanocytic nevus (Mole)",
+    "name": "Melanocytic nevus",
     "overview": "A melanocytic nevus is commonly known as a mole. Almost everyone has them. They are benign and entirely normal skin features.",
     "what_it_is": "A localized cluster of pigment-producing cells (melanocytes). Most moles appear during childhood and young adulthood.",
     "causes_risks": "Genetics dictates how many moles a person will have. Sun exposure during childhood can also increase the number of moles that develop.",

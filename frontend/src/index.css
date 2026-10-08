@@ -2,6 +2,8 @@
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
   --bg-main: #FAFAFA;
   --Surface: #FFFFFF;
+  --bg-subtle: #F3F4F6;
+  --bg-lighter: #F8FAFC;
   --text-main: #111827;
   --text-secondary: #4B5563;
   --text-muted: #9CA3AF;
@@ -9,30 +11,37 @@
   --accent-hover: #1D4ED8;
   --border: #E5E7EB;
   
-  --tier-routine: #059669; /* Emerald 600 */
-  --tier-routine-bg: #D1FAE5; /* Emerald 100 */
+  --tier-routine: #059669;
+  --tier-routine-bg: #D1FAE5;
   
-  --tier-soon: #D97706; /* Amber 600 */
-  --tier-soon-bg: #FEF3C7; /* Amber 100 */
+  --tier-soon: #D97706;
+  --tier-soon-bg: #FEF3C7;
   
-  --tier-urgent: #DC2626; /* Red 600 */
-  --tier-urgent-bg: #FEE2E2; /* Red 100 */
+  --tier-urgent: #DC2626;
+  --tier-urgent-bg: #FEE2E2;
 
   --warning-color: #D97706;
   --warning-bg: #FEF3C7;
+  
+  --error-color: #991B1B;
+  --error-bg: #FEE2E2;
 }
 
 [data-theme='dark'] {
   --bg-main: #111827;
   --Surface: #1F2937;
+  --bg-subtle: #374151;
+  --bg-lighter: #111827;
   --text-main: #F9FAFB;
   --text-secondary: #D1D5DB;
   --text-muted: #9CA3AF;
-  --border: #374151;
-  --tier-routine-bg: #064E3B; /* darker emerald */
+  --border: #4B5563;
+  --tier-routine-bg: #064E3B;
   --tier-soon-bg: #78350F;
   --tier-urgent-bg: #7F1D1D;
   --warning-bg: #451A03;
+  --error-bg: #7F1D1D;
+  --error-color: #FECACA;
 }
 
 * {
@@ -47,7 +56,11 @@ body {
   color: var(--text-main);
   line-height: 1.5;
   font-size: 16px;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -93,8 +106,8 @@ a:hover { text-decoration: underline; }
 }
 
 .notice {
-  background-color: #F3F4F6;
-  color: #374151;
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
   text-align: center;
   padding: 8px;
   font-size: 14px;
@@ -126,6 +139,11 @@ input[type="text"], input[type="number"], select {
   font-size: 16px;
   font-family: inherit;
   margin-bottom: 16px;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+input[type="text"]::placeholder, input[type="number"]::placeholder {
+  color: var(--text-muted);
 }
 input[type="checkbox"] {
   margin-right: 8px;
@@ -157,7 +175,7 @@ button.secondary {
   color: var(--text-main);
   border: 1px solid var(--border);
 }
-button.secondary:hover { background-color: #F3F4F6; }
+button.secondary:hover { background-color: var(--bg-subtle); }
 
 /* Grid */
 .grid { display: grid; gap: 24px; }

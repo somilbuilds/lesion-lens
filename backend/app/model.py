@@ -52,10 +52,12 @@ class SkinModel:
         # Build with timm
         self.model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)
         if os.path.exists(model_path):
-            state_dict = torch.load(model_path, map_location=self.device)
+            state_dict = torch.load(model_path, map_location=self.device, weights_only=False)
             # handle cases where model weights are saved inside a model state dict
             if 'state_dict' in state_dict:
                 state_dict = state_dict['state_dict']
+            elif 'model_state' in state_dict:
+                state_dict = state_dict['model_state']
             self.model.load_state_dict(state_dict)
             
         self.model.to(self.device)

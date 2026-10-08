@@ -32,11 +32,11 @@ export default function About() {
             
             <h3>Measured Test Results (1,203 held-out images)</h3>
             <div className="grid grid-cols-2" style={{ marginBottom: '24px' }}>
-              <div style={{ backgroundColor: '#F3F4F6', padding: '16px', borderRadius: '8px' }}>
+              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '16px', borderRadius: '8px' }}>
                 <p style={{ margin: 0 }}><strong>Accuracy:</strong> {(info?.metrics?.accuracy * 100).toFixed(1)}%</p>
                 <p style={{ margin: 0 }}><strong>Balanced Accuracy:</strong> {(info?.metrics?.balanced_accuracy * 100).toFixed(1)}%</p>
               </div>
-              <div style={{ backgroundColor: '#F3F4F6', padding: '16px', borderRadius: '8px' }}>
+              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '16px', borderRadius: '8px' }}>
                 <p style={{ margin: 0 }}><strong>Macro AUC:</strong> {info?.metrics?.macro_auc}</p>
                 <p style={{ margin: 0 }}><strong>Macro F1:</strong> {info?.metrics?.macro_f1}</p>
               </div>
@@ -60,7 +60,7 @@ export default function About() {
             </table>
             
             <h3>Melanoma / Nevus Weakness</h3>
-            <div style={{ backgroundColor: '#FEF3C7', padding: '16px', borderRadius: '8px', color: '#B45309' }}>
+            <div style={{ backgroundColor: 'var(--warning-bg)', padding: '16px', borderRadius: '8px', color: 'var(--warning-color)' }}>
               <p style={{ margin: 0, fontWeight: 500 }}>Precision for Melanoma: {(info?.metrics?.melanoma_precision * 100).toFixed(1)}%</p>
               <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>{info?.metrics?.melanoma_notes}</p>
             </div>

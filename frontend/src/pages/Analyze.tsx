@@ -52,7 +52,7 @@ export default function Analyze({ onComplete }: { onComplete: (res: any, file: F
       onComplete(res, file, symptoms);
       navigate('/results');
     } catch (err: any) {
-      setError(err.message || 'An error occurred during analysis.');
+      setError(err.message || t.errorOccurred);
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function Analyze({ onComplete }: { onComplete: (res: any, file: F
           >
             <UploadCloud size={48} color="var(--text-muted)" style={{ margin: '0 auto 16px auto', display: 'block' }} />
             <p style={{ color: 'var(--text-main)', fontWeight: 500 }}>{t.dragDrop}</p>
-            <p style={{ fontSize: '14px' }}>JPG, PNG, WEBP max 10 MB</p>
+            <p style={{ fontSize: '14px' }}>{t.maxFileSize}</p>
             
             <div style={{ marginTop: '24px' }}>
               <button 
@@ -109,38 +109,38 @@ export default function Analyze({ onComplete }: { onComplete: (res: any, file: F
                   
                   <div className="grid grid-cols-2">
                     <div>
-                      <label>Age</label>
+                      <label>{t.age}</label>
                       <input type="number" onChange={(e) => setSymptoms({...symptoms, age: e.target.value})} style={{ backgroundColor: 'var(--Surface)', color: 'var(--text-main)' }} />
                     </div>
                     <div>
-                      <label>Sex</label>
+                      <label>{t.sex}</label>
                       <select onChange={(e) => setSymptoms({...symptoms, sex: e.target.value})} style={{ backgroundColor: 'var(--Surface)', color: 'var(--text-main)' }}>
                         <option value=""></option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
+                        <option value="male">{t.male}</option>
+                        <option value="female">{t.female}</option>
                       </select>
                     </div>
                   </div>
                   
                   <div className="checkbox-group">
                     <input type="checkbox" id="grew" onChange={(e) => setSymptoms({...symptoms, grew: e.target.checked})} />
-                    <label htmlFor="grew">Has the spot grown rapidly?</label>
+                    <label htmlFor="grew">{t.grewQuestion}</label>
                   </div>
                   <div className="checkbox-group">
                     <input type="checkbox" id="changed" onChange={(e) => setSymptoms({...symptoms, changed: e.target.checked})} />
-                    <label htmlFor="changed">Has it changed shape or color?</label>
+                    <label htmlFor="changed">{t.changedQuestion}</label>
                   </div>
                   <div className="checkbox-group">
                     <input type="checkbox" id="bleed" onChange={(e) => setSymptoms({...symptoms, bleed: e.target.checked})} />
-                    <label htmlFor="bleed">Does it bleed without being scratched?</label>
+                    <label htmlFor="bleed">{t.bleedQuestion}</label>
                   </div>
                   <div className="checkbox-group">
                     <input type="checkbox" id="itch" onChange={(e) => setSymptoms({...symptoms, itch: e.target.checked})} />
-                    <label htmlFor="itch">Does it itch or hurt?</label>
+                    <label htmlFor="itch">{t.itchQuestion}</label>
                   </div>
                   <div className="checkbox-group">
                     <input type="checkbox" id="personal_skin_cancer_history" onChange={(e) => setSymptoms({...symptoms, personal_skin_cancer_history: e.target.checked})} />
-                    <label htmlFor="personal_skin_cancer_history">Personal history of skin cancer?</label>
+                    <label htmlFor="personal_skin_cancer_history">{t.cancerHistoryQuestion}</label>
                   </div>
                 </div>
               )}
