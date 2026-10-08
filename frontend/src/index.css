@@ -241,11 +241,30 @@ button.secondary:hover { background-color: var(--bg-subtle); }
 
 @media print {
   body {
-    background-color: white;
-    font-size: 12pt;
+    background-color: white !important;
+    color: black !important;
+    font-size: 11pt;
+    height: auto !important;
+    overflow: visible !important;
   }
-  .nav, .notice, button { display: none; }
-  .card { border: none; padding: 0; margin-bottom: 16px; }
+  #root, .container {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  .nav, .notice, button, .tabs, .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .card { border: none !important; padding: 0 !important; margin-bottom: 16pt !important; background-color: transparent !important; box-shadow: none !important; }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Avoid page breaks inside important containers */
+  .avoid-break { page-break-inside: avoid; }
+}
+
+@media screen {
+  .print-only { display: none !important; }
 }
 
 /* Tabs */
