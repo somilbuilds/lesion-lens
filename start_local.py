@@ -18,7 +18,6 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -80,6 +79,11 @@ def executable(name: str) -> Path:
     return VENV / "bin" / name
 
 
+def npm_command() -> str:
+    # Windows exposes npm through npm.cmd rather than a directly executable npm binary.
+    return "npm.cmd" if os.name == "nt" else "npm"
+
+
 def ensure_python_env() -> Path:
     python = executable("python.exe" if os.name == "nt" else "python")
 
@@ -103,7 +107,7 @@ def ensure_frontend_dependencies() -> None:
     node_modules = FRONTEND / "node_modules"
     if not node_modules.exists():
         log("Installing frontend npm dependencies (first run only)...")
-        subprocess.check_call(["npm", "install"], cwd=str(FRONTEND))
+        subprocess.check_call([npm_command(), "install"], cwd=str(FRONTEND))
 
 
 def wait_for_port(host: str, port: int, process: subprocess.Popen, timeout: float = 120) -> None:
@@ -131,7 +135,6 @@ def stop_process(label: str, process: subprocess.Popen) -> None:
 
     try:
         if os.name == "nt":
-            # /T also terminates child processes such as Vite/uvicorn reload children.
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
@@ -169,62 +172,79 @@ def main() -> None:
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    log("Preparing local environment...")
-    python = ensure_python_env()
-    ensure_frontend_dependencies()
-
-    log("Starting backend...")
-    backend = run(
-        [
-            str(python),
-            "-m",
-            "uvicorn",
-            "app.main:app",
-            "--app-dir",
-            str(BACKEND),
-            "--host",
-            BACKEND_HOST,
-            "--port",
-            str(BACKEND_PORT),
-        ],
-        ROOT,
-        "backend",
-    )
-
-    wait_for_port(BACKEND_HOST, BACKEND_PORT, backend)
-    log(f"Backend ready: http://localhost:{BACKEND_PORT}")
-
-    log("Starting frontend...")
-    frontend = run(
-        ["npm", "run", "dev", "--", "--host", FRONTEND_HOST, "--port", str(FRONTEND_PORT)],
-        FRONTEND,
-        "frontend",
-    )
-
-    wait_for_port(FRONTEND_HOST, FRONTEND_PORT, frontend)
-    log(f"Frontend ready: http://localhost:{FRONTEND_PORT}")
-
-    # Give Vite a moment to finish its initial compilation before opening the browser.
-    time.sleep(1)
-    webbrowser.open(f"http://localhost:{FRONTEND_PORT}")
-
-    print()
-    log("Lesion Lens is running locally.")
-    log("Frontend: http://localhost:5173")
-    log("Backend:  http://localhost:8000")
-    log("Developer logs from both services are shown below.")
-    log("Press Ctrl+C to stop everything.")
-    print()
-
     try:
+        log("Preparing local environment...")
+        python = ensure_python_env()
+        ensure_frontend_dependencies()
+
+        log("Starting backend...")
+        backend = run(
+            [
+                str(python),
+                "-m",
+                "uvicorn",
+                "app.main:app",
+                "--app-dir",
+                str(BACKEND),
+                "--host",
+                BACKEND_HOST,
+                "--port",
+                str(BACKEND_PORT),
+            ],
+            ROOT,
+            "backend",
+        )
+
+        wait_for_port(BACKEND_HOST, BACKEND_PORT, backend)
+        log(f"Backend ready: http://localhost:{BACKEND_PORT}")
+
+        log("Starting frontend...")
+        frontend = run(
+            [
+                npm_command(),
+                "run",
+                "dev",
+                "--",
+                "--host",
+                FRONTEND_HOST,
+                "--port",
+                str(FRONTEND_PORT),
+            ],
+            FRONTEND,
+            "frontend",
+        )
+
+        wait_for_port(FRONTEND_HOST, FRONTEND_PORT, frontend)
+        log(f"Frontend ready: http://localhost:{FRONTEND_PORT}")
+
+        time.sleep(1)
+        webbrowser.open(f"http://localhost:{FRONTEND_PORT}")
+
+        print()
+        log("Lesion Lens is running locally.")
+        log("Frontend: http://localhost:5173")
+        log("Backend:  http://localhost:8000")
+        log("Developer logs from both services are shown below.")
+        log("Press Ctrl+C to stop everything.")
+        print()
+
         while True:
             for label, process in processes:
                 if process.poll() is not None and not stopping:
                     log(f"{label} exited with code {process.returncode}. Shutting down.")
                     shutdown()
             time.sleep(0.5)
+
     except KeyboardInterrupt:
         shutdown()
+    except BaseException:
+        if processes and not stopping:
+            stopping = True
+            print("\n", flush=True)
+            for label, process in reversed(processes):
+                stop_process(label, process)
+            log("Startup failed; all started services were stopped.")
+        raise
 
 
 if __name__ == "__main__":
