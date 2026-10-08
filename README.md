@@ -76,6 +76,16 @@ Built around `timm.create_model("efficientnet_b0", pretrained=False, num_classes
 ### Requirements
 Ensure **Python 3.11** and **Node.js 18+** are installed in your OS environment.
 
+### One-command local demo
+
+From the project root, run:
+
+```bash
+python start_local.py
+```
+
+This automatically prepares the backend virtual environment and dependencies on first run, starts the FastAPI backend and Vite frontend, streams both developer logs into the same terminal, opens the app in your browser, and stops both services when you press `Ctrl+C`. No separate stop script is required.
+
 ### 1. Clone Repository
 ```bash
 git clone https://github.com/somilbuilds/lesion-lens.git
