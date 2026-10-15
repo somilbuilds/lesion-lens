@@ -57,17 +57,18 @@ body {
   line-height: 1.5;
   font-size: 14px;
   transition: background-color 0.3s ease, color 0.3s ease;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #root {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  min-height: 100vh;
+  width: 100%;
+  overflow: visible;
 }
 
 *, *::before, *::after {
@@ -96,7 +97,7 @@ a:hover { text-decoration: underline; }
   width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
 }
 
@@ -284,4 +285,22 @@ button.secondary:hover { background-color: var(--bg-subtle); }
   border-bottom-color: var(--accent);
   color: var(--accent);
   font-weight: 500;
+}
+
+
+/* Restore page-level scrolling across upload, model information, and result screens. */
+html {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.container {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.results-page {
+  height: auto !important;
+  min-height: 100%;
+  overflow: visible;
 }
