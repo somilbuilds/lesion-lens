@@ -75,6 +75,26 @@ Built around `timm.create_model("efficientnet_b0", pretrained=False, num_classes
 ### Requirements
 Ensure **Python 3.11** and **Node.js 18+** are installed in your OS environment.
 
+### Optional Groq report wording
+
+The backend can use Groq to rewrite the classifier output into a cautious, patient-friendly English report and a clinician-facing summary. It does not use Groq to diagnose a lesion or claim it detected redness, asymmetry, or border changes. Without a key, a built-in fallback report is returned and analysis still works.
+
+1. Copy `.env.example` to `.env` in the repository root.
+2. Set `GROQ_API_KEY=your_key_here` in `.env`.
+3. Optionally set `GROQ_MODEL` to a model available to your Groq account.
+
+Never commit `.env` or paste your API key into source code. Hindi mode keeps a localized patient-facing explanation and labels the Groq-generated detailed report as English. Groq report generation requires internet access; failures fall back automatically.
+
+### Research charts
+
+Open **Research & Model Comparison** in the results screen. Add figures to `frontend/public/research/` with these filenames:
+
+- `model-comparison.png`
+- `confusion-matrices.png`
+- `class-metrics.png` (optional)
+
+See `frontend/public/research/README.md`. Use the same held-out evaluation split when comparing models and label the dataset and class order.
+
 ### One-command local demo
 
 From the project root, run:
