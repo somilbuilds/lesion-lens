@@ -177,6 +177,10 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                             <ul style={{ paddingLeft: '18px', fontSize: '12px' }}>{result.language_reports.patient_report_en?.next_steps?.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
                           </>
                         )}
+                        <details style={{ marginTop: '8px' }}>
+                          <summary style={{ cursor: 'pointer', fontSize: '12px' }}>{lang === 'hi' ? 'चिकित्सक / तकनीकी सारांश' : 'Clinician & technical summary'}</summary>
+                          <p style={{ fontSize: '12px', marginTop: '6px' }}>{result.language_reports.clinical_report_en}</p>
+                        </details>
                         <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: 0 }}>{result.language_reports.available ? 'Groq-generated wording' : 'Built-in fallback report; configure GROQ_API_KEY to enable Groq.'}</p>
                       </div>
                     )}
