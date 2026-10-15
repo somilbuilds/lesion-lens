@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 from app.model import SkinModel
 from app.config import config
+from app.reporting import generate_report
 
 app = FastAPI()
 
@@ -94,20 +95,17 @@ async def analyze(
     bleed: Optional[bool] = Form(False),
     personal_skin_cancer_history: Optional[bool] = Form(False),
 ):
-    # Validate image format and size
     logger.info(f"Received request for analyze: file_type={image.content_type}")
     if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
         logger.warning(f"Invalid format: {image.content_type}")
         return {"input_check": {"level": "reject", "reasons": ["Invalid image format. Only JPG, PNG, WEBP allowed."]}}
-    
-    # Read to memory
+
     content = await image.read()
     if len(content) > config.max_image_size_mb * 1024 * 1024:
         logger.warning(f"Image too large: {len(content)} bytes")
         return {"input_check": {"level": "reject", "reasons": [f"Image exceeds maximum size of {config.max_image_size_mb} MB."]}}
-    
+
     try:
-        # Strip EXIF while opening
         img = Image.open(BytesIO(content))
         data = list(img.getdata())
         image_without_exif = Image.new(img.mode, img.size)
@@ -116,34 +114,25 @@ async def analyze(
     except Exception as e:
         logger.error(f"Image parse error: {e}")
         return {"input_check": {"level": "reject", "reasons": ["Could not parse image."]}}
-        
+
     logger.info("Image parsed successfully")
-        
     symptoms = {
-        "itch": itch,
-        "grew": grew,
-        "hurt": hurt,
-        "changed": changed,
-        "bleed": bleed,
-        "personal_skin_cancer_history": personal_skin_cancer_history
+        "itch": itch, "grew": grew, "hurt": hurt, "changed": changed,
+        "bleed": bleed, "personal_skin_cancer_history": personal_skin_cancer_history
     }
-    
+
     result = skin_model.analyze_image(img, symptoms)
-    
     logger.info(f"Analysis complete: input_check={result.get('input_check', {}).get('level')}")
-    
-    # Attach conditions content for convenience
+
     top_class = result.get("top3", [{"class": ""}])[0]["class"] if result.get("top3") else ""
-    if "input_check" in result and result["input_check"]["level"] == "reject":
-        pass
-    else:
+    if result.get("input_check", {}).get("level") != "reject":
         result["content"] = conditions_content
-        
-    # NV extra warning
+        # Groq is optional: the fallback report keeps analysis working without an API key/network.
+        result["language_reports"] = await generate_report(result, symptoms)
+
     if top_class == "nv":
-        if "guidance" not in result:
-            result["guidance"] = []
-        result["guidance"].append("This tool misses some melanomas. A mole that is changing, growing, itching, bleeding or looks different from your others should be checked regardless of this result.")
+        result.setdefault("guidance", []).append(
+            "This tool misses some melanomas. A mole that is changing, growing, itching, bleeding or looks different from your others should be checked regardless of this result."
+        )
 
     return result
-
