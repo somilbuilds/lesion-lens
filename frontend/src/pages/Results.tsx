@@ -151,6 +151,25 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                       </ul>
                     </div>
 
+
+                    {result.explanation_report && (
+                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, overflowY: 'auto', maxHeight: '310px' }}>
+                        <h4 style={{ marginBottom: '6px', fontSize: '14px' }}>Why the model predicted this</h4>
+                        <p style={{ fontSize: '12px', marginBottom: '8px' }}>{result.explanation_report.headline}</p>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', lineHeight: 1.5 }}>
+                          {result.explanation_report.narrative.map((line: string, i: number) => <li key={i} style={{ marginBottom: '5px' }}>{line}</li>)}
+                        </ul>
+                        {result.explanation_report.metrics?.occlusion?.available && (
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '12px' }}>
+                            <strong>Patch occlusion metrics</strong>
+                            <div>Largest score drop: {(result.explanation_report.metrics.occlusion.max_probability_drop * 100).toFixed(1)} percentage points</div>
+                            <div>Mean positive drop: {(result.explanation_report.metrics.occlusion.mean_positive_drop * 100).toFixed(2)} percentage points</div>
+                            <div>Tested patches affecting score: {(result.explanation_report.metrics.occlusion.positive_patch_fraction * 100).toFixed(1)}%</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="card" style={{ marginBottom: 0, padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                       <h4 style={{ marginBottom: '8px', fontSize: '14px' }}>Top Matches</h4>
                       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -377,6 +396,18 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               </p>
             )}
           </div>
+
+
+          {result.explanation_report && (
+            <div className="avoid-break" style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>Explainability Report</h3>
+              <p style={{ fontSize: '11pt' }}><strong>{result.explanation_report.headline}</strong></p>
+              <ul style={{ fontSize: '10pt', lineHeight: 1.5 }}>
+                {result.explanation_report.narrative.map((line: string, i: number) => <li key={i} style={{ marginBottom: '5px' }}>{line}</li>)}
+              </ul>
+              {result.explanation_report.metrics?.occlusion?.available && <p style={{ fontSize: '10pt' }}>Occlusion test: largest score drop {(result.explanation_report.metrics.occlusion.max_probability_drop * 100).toFixed(1)} percentage points across {result.explanation_report.metrics.occlusion.patch_count} tested patches.</p>}
+            </div>
+          )}
 
           <div className="avoid-break">
             <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>
