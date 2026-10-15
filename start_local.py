@@ -166,6 +166,7 @@ def shutdown(*_args) -> None:
 
 
 def main() -> None:
+    global stopping
     if not BACKEND.exists() or not FRONTEND.exists():
         raise RuntimeError("Expected backend/ and frontend/ directories in the project root.")
 
