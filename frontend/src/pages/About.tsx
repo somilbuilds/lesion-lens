@@ -59,6 +59,23 @@ export default function About() {
               </tbody>
             </table>
             
+            <h3 style={{ marginTop: '28px' }}>Research & Model Comparison</h3>
+            <p>Comparison figures from the research experiments. Replace the placeholders with plots generated from the same held-out evaluation split and label the dataset, class order, and sample count.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {[
+                { src: '/research/model-comparison.png', title: 'Model metrics comparison', placeholder: 'Add frontend/public/research/model-comparison.png' },
+                { src: '/research/confusion-matrices.png', title: 'Confusion matrices', placeholder: 'Add frontend/public/research/confusion-matrices.png' },
+                { src: '/research/class-metrics.png', title: 'Per-class metrics (optional)', placeholder: 'Add frontend/public/research/class-metrics.png' },
+              ].map((chart) => (
+                <section className="card" key={chart.src} style={{ margin: 0, padding: '12px', minWidth: 0 }}>
+                  <h4>{chart.title}</h4>
+                  <img src={chart.src} alt={chart.title} style={{ width: '100%', height: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none'; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = 'block'; }} />
+                  <p style={{ display: 'none', fontSize: '12px', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{chart.placeholder}</p>
+                </section>
+              ))}
+            </div>
+            <p style={{ fontSize: '12px' }}>Research note: the comparison charts are separate from the live classifier metrics shown above. Do not treat results from different datasets or splits as directly comparable.</p>
+
             <h3>Melanoma / Nevus Weakness</h3>
             <div style={{ backgroundColor: 'var(--warning-bg)', padding: '16px', borderRadius: '8px', color: 'var(--warning-color)' }}>
               <p style={{ margin: 0, fontWeight: 500 }}>Precision for Melanoma: {(info?.metrics?.melanoma_precision * 100).toFixed(1)}%</p>
