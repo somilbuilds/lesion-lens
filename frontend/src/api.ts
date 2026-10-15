@@ -1,8 +1,23 @@
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
+
+// Localhost is only a development fallback. Never silently point a deployed
+// frontend at the visitor's own computer.
 export const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  configuredApiBase ||
+  (import.meta.env.DEV ? 'http://localhost:8000' : '');
+
+function getApiUrl(path: string) {
+  if (!API_BASE) {
+    throw new Error(
+      'Backend URL is not configured. Set VITE_API_BASE_URL in the frontend deployment environment and rebuild.'
+    );
+  }
+
+  return `${API_BASE}${path}`;
+}
 
 export async function fetchHealth() {
-  const res = await fetch(`${API_BASE}/api/health`);
+  const res = await fetch(getApiUrl('/api/health'));
 
   if (!res.ok) {
     throw new Error(`Health check failed: ${res.status}`);
@@ -12,7 +27,7 @@ export async function fetchHealth() {
 }
 
 export async function fetchModelInfo() {
-  const res = await fetch(`${API_BASE}/api/model-info`);
+  const res = await fetch(getApiUrl('/api/model-info'));
 
   if (!res.ok) {
     throw new Error(`Model info failed: ${res.status}`);
@@ -34,7 +49,7 @@ export async function analyzeImage(file: File, symptoms: any) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/analyze`, {
+    const res = await fetch(getApiUrl('/api/analyze'), {
       method: 'POST',
       body: formData,
     });
