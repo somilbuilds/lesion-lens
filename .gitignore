@@ -1,5 +1,11 @@
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+
 # Python
 backend/venv/
+backend/.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -37,13 +43,13 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
-# Models & Media (Do not ignore models/best.pt unless necessary. We should keep models/best.pt but ignore generated docs/test files)
-# If the model is huge, usually we put it in git lfs, but for now we won't ignore it to make it self-contained if the user meant to commit it, but wait, if it's over 100MB github rejects it. A typical efficientnet is ~20MB, so it should be fine.
+# Models & Media
 *.jpg
 *.jpeg
 *.png
 *.webp
 !docs/*.png
+!frontend/public/research/*.png
 
 # OS
 .DS_Store
