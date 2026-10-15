@@ -128,7 +128,7 @@ async def analyze(
     if result.get("input_check", {}).get("level") != "reject":
         result["content"] = conditions_content
         # Groq is optional: the fallback report keeps analysis working without an API key/network.
-        result["language_reports"] = await generate_report(result, symptoms)
+        result["language_reports"] = await generate_report(\n            result,\n            symptoms,\n            {"age": age, "sex": sex, "fitzpatrick": fitzpatrick, "body_region": body_region, "diameter_mm": diameter_mm},\n            conditions_content,\n        )
 
     if top_class == "nv":
         result.setdefault("guidance", []).append(
