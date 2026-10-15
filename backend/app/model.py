@@ -123,6 +123,47 @@ class SkinModel:
         buffer.seek(0)
         return "data:image/png;base64," + base64.b64encode(buffer.read()).decode('utf-8')
 
+
+    def _occlusion_explanation(self, input_tensor: torch.Tensor, class_idx: int) -> Dict[str, Any]:
+        """Measure how masking image patches changes the selected class score."""
+        patch_size, step = 32, 28
+        _, height, width = input_tensor.shape
+        regions = [(x, y, min(x + patch_size, width), min(y + patch_size, height))
+                   for y in range(0, height - patch_size + 1, step)
+                   for x in range(0, width - patch_size + 1, step)]
+        with torch.no_grad():
+            baseline_logits = self.model(input_tensor.unsqueeze(0).to(self.device)) / config.temperature
+            baseline_prob = float(F.softmax(baseline_logits, dim=-1)[0, class_idx].item())
+            drops = []
+            for start in range(0, len(regions), 16):
+                region_batch = regions[start:start + 16]
+                masked_batch = input_tensor.unsqueeze(0).repeat(len(region_batch), 1, 1, 1)
+                for i, (x1, y1, x2, y2) in enumerate(region_batch):
+                    # Zero in normalized space corresponds to ImageNet mean colour.
+                    masked_batch[i, :, y1:y2, x1:x2] = 0.0
+                logits = self.model(masked_batch.to(self.device)) / config.temperature
+                probs = F.softmax(logits, dim=-1)[:, class_idx].cpu().tolist()
+                drops.extend(baseline_prob - float(p) for p in probs)
+        if not drops:
+            return {"available": False}
+        best_idx = int(np.argmax(drops))
+        return {
+            "available": True,
+            "baseline_probability": baseline_prob,
+            "max_probability_drop": float(max(0.0, drops[best_idx])),
+            "mean_positive_drop": float(np.mean([max(0.0, d) for d in drops])),
+            "positive_patch_fraction": float(np.mean(np.array(drops) > 0)),
+            "patch_grid": {
+                "x_start": regions[best_idx][0] / width,
+                "y_start": regions[best_idx][1] / height,
+                "x_end": regions[best_idx][2] / width,
+                "y_end": regions[best_idx][3] / height
+            },
+            "patch_size_px": patch_size,
+            "patch_count": len(regions),
+            "method": "32px patches, 28px stride; patches replaced with ImageNet mean colour"
+        }
+
     def analyze_image(self, img: Image.Image, symptoms: Dict[str, bool]) -> Dict[str, Any]:
         start_time = time.time()
         
@@ -319,7 +360,56 @@ class SkinModel:
         # The segmenter uses the GradCAM
         polygon = self.segmenter.segment(img_np, full_gradcam)
         
-        # 8. Guidance text
+
+        # Explainability report: model-score evidence, stability, and perturbation sensitivity.
+        occlusion = self._occlusion_explanation(t_img, top1_idx)
+        class_names = {
+            "akiec": "actinic keratosis / intraepithelial carcinoma",
+            "bcc": "basal cell carcinoma",
+            "bkl": "benign keratosis-like lesion",
+            "df": "dermatofibroma",
+            "mel": "melanoma",
+            "nv": "melanocytic nevus",
+            "vasc": "vascular lesion"
+        }
+        top2_idx = int(top_indices[1])
+        top2_class = config.classes[top2_idx]
+        top2_prob = float(avg_probs[top2_idx])
+        if margin >= 0.30:
+            separation_text = "The leading class is clearly separated from the second-ranked class by the model's scores."
+        elif margin >= 0.10:
+            separation_text = "The leading class has a moderate score advantage; the runner-up remains relevant."
+        else:
+            separation_text = "The leading and second-ranked classes are close, so the ranking is not decisive."
+        agreement_text = f"The same leading class appeared in {int(round(view_agreement * 4))} of 4 original/flip views."
+        if occlusion.get("available"):
+            drop_pp = occlusion["max_probability_drop"] * 100
+            if drop_pp >= 5:
+                occlusion_text = f"Masking the most influential tested 32-pixel patch reduced the leading-class score by {drop_pp:.1f} percentage points in a single-view occlusion test."
+            else:
+                occlusion_text = f"The largest tested patch-masking change in the leading-class score was {drop_pp:.1f} percentage points; this test found no large localized score drop."
+        else:
+            occlusion_text = "Patch occlusion analysis was unavailable."
+        explanation_report = {
+            "headline": f"The model ranked {class_names.get(top1_class, top1_class)} highest.",
+            "narrative": [
+                f"The leading class score was {top1_prob * 100:.1f}%; the second-ranked class was {class_names.get(top2_class, top2_class)} at {top2_prob * 100:.1f}%. These are model scores, not calibrated probabilities of disease.",
+                f"The score margin was {margin * 100:.1f} percentage points. {separation_text}",
+                f"Normalized prediction entropy was {norm_entropy:.3f} on a 0–1 scale; higher values mean scores are more spread out.",
+                agreement_text,
+                occlusion_text,
+                "Grad-CAM and patch occlusion describe model sensitivity, not validated medical features. They do not prove the model used clinically meaningful signs and are not a diagnosis."
+            ],
+            "metrics": {
+                "top_class_score": top1_prob,
+                "runner_up_score": top2_prob,
+                "score_margin": margin,
+                "normalized_entropy": norm_entropy,
+                "view_agreement": view_agreement,
+                "occlusion": occlusion
+            }
+        }
+        # 9. Guidance text
         guidance = []
         if symptoms.get("grew", False):
             guidance.append("You noted growth. Tell the doctor how fast it has been growing.")
@@ -330,6 +420,7 @@ class SkinModel:
             
         result = {
             "probabilities": {config.classes[i]: float(avg_probs[i]) for i in range(len(config.classes))},
+            "explanation_report": explanation_report,
             "top3": [{"class": config.classes[idx], "prob": float(avg_probs[idx])} for idx in top_indices[:3]],
             "inconclusive": inconclusive,
             "uncertainty": {
