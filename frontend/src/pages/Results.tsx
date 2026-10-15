@@ -7,7 +7,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
   const [opacity, setOpacity] = useState(0.5);
   const [showOutline, setShowOutline] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [mainTab, setMainTab] = useState<'analysis' | 'learn' | 'appointment'>('analysis');
+  const [mainTab, setMainTab] = useState<'analysis' | 'learn' | 'appointment' | 'research'>('analysis');
   
   const imgUrl = useMemo(() => imageFile ? URL.createObjectURL(imageFile) : '', [imageFile]);
 
@@ -46,6 +46,9 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               </div>
               <div className={`tab ${mainTab === 'appointment' ? 'active' : ''}`} onClick={() => setMainTab('appointment')}>
                 Appointment & Notes
+              </div>
+              <div className={`tab ${mainTab === 'research' ? 'active' : ''}`} onClick={() => setMainTab('research')}>
+                {lang === 'hi' ? 'शोध और मॉडल तुलना' : 'Research & Model Comparison'}
               </div>
             </div>
 
@@ -151,6 +154,32 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                       </ul>
                     </div>
 
+
+                    {result.language_reports && (
+                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, overflowY: 'auto', maxHeight: '300px' }}>
+                        <h4 style={{ marginBottom: '6px', fontSize: '14px' }}>{lang === 'hi' ? 'आसान भाषा में रिपोर्ट' : 'Patient-friendly explanation'}</h4>
+                        {lang === 'hi' ? (
+                          <>
+                            <p style={{ fontSize: '13px', fontWeight: 600 }}>{t[topConditionKey as keyof typeof t] || topConditionKey} — मॉडल का सबसे ऊँचा मिलान</p>
+                            <p style={{ fontSize: '12px' }}>यह फोटो-आधारित मॉडल का अनुमान है, पक्का निदान नहीं। मॉडल ने त्वचा की लालिमा, किनारों या रंग जैसे चिकित्सकीय लक्षणों को अलग से सत्यापित नहीं किया है।</p>
+                            <p style={{ fontSize: '12px' }}>यदि दाग बढ़ रहा है, बदल रहा है, खून निकलता है, दर्द होता है या आपको चिंता है, तो डॉक्टर/त्वचा रोग विशेषज्ञ से जाँच कराएँ।</p>
+                            <details>
+                              <summary style={{ cursor: 'pointer', fontSize: '12px' }}>AI द्वारा लिखी विस्तृत रिपोर्ट (English)</summary>
+                              <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.headline}</p>
+                              <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.summary}</p>
+                              <ul style={{ paddingLeft: '18px', fontSize: '12px' }}>{result.language_reports.patient_report_en?.next_steps?.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
+                            </details>
+                          </>
+                        ) : (
+                          <>
+                            <p style={{ fontSize: '13px', fontWeight: 600 }}>{result.language_reports.patient_report_en?.headline}</p>
+                            <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.summary}</p>
+                            <ul style={{ paddingLeft: '18px', fontSize: '12px' }}>{result.language_reports.patient_report_en?.next_steps?.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
+                          </>
+                        )}
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: 0 }}>{result.language_reports.available ? 'Groq-generated wording' : 'Built-in fallback report; configure GROQ_API_KEY to enable Groq.'}</p>
+                      </div>
+                    )}
 
                     {result.explanation_report && (
                       <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, overflowY: 'auto', maxHeight: '310px' }}>
@@ -259,6 +288,31 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
                       </ul>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {mainTab === 'research' && (
+                <div className="card" style={{ height: '100%', overflowY: 'auto', margin: 0, padding: '16px' }}>
+                  <h3>{lang === 'hi' ? 'मॉडल तुलना और शोध' : 'Model Comparison & Research'}</h3>
+                  <p style={{ fontSize: '13px' }}>{lang === 'hi' ? 'इन चार्टों में अपने शोध के वास्तविक मूल्यांकन परिणाम जोड़ें।' : 'Add the actual evaluation plots from your model-comparison experiments. Keep dataset and test-split details with each figure.'}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                    <section className="card" style={{ margin: 0 }}>
+                      <h4>{lang === 'hi' ? 'मॉडल मेट्रिक्स की तुलना' : 'Model metrics comparison'}</h4>
+                      <img src="/research/model-comparison.png" alt="Model comparison bar chart" style={{ width: '100%', height: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none'; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = 'block'; }} />
+                      <p style={{ display: 'none', fontSize: '12px', color: 'var(--text-muted)' }}>Placeholder: add frontend/public/research/model-comparison.png</p>
+                    </section>
+                    <section className="card" style={{ margin: 0 }}>
+                      <h4>{lang === 'hi' ? 'कन्फ्यूज़न मैट्रिक्स' : 'Confusion matrices'}</h4>
+                      <img src="/research/confusion-matrices.png" alt="Confusion matrices for model comparison" style={{ width: '100%', height: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none'; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = 'block'; }} />
+                      <p style={{ display: 'none', fontSize: '12px', color: 'var(--text-muted)' }}>Placeholder: add frontend/public/research/confusion-matrices.png</p>
+                    </section>
+                    <section className="card" style={{ margin: 0 }}>
+                      <h4>{lang === 'hi' ? 'प्रति-कक्षा मेट्रिक्स (वैकल्पिक)' : 'Per-class metrics (optional)'}</h4>
+                      <img src="/research/class-metrics.png" alt="Per-class precision recall and F1 metrics" style={{ width: '100%', height: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none'; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = 'block'; }} />
+                      <p style={{ display: 'none', fontSize: '12px', color: 'var(--text-muted)' }}>Placeholder: add frontend/public/research/class-metrics.png</p>
+                    </section>
+                  </div>
+                  <p style={{ fontSize: '12px', marginTop: '12px' }}>{lang === 'hi' ? 'ध्यान दें: तुलना में एक ही परीक्षण सेट और स्पष्ट class order का उपयोग करें।' : 'Research note: compare models on the same held-out test split and label class order, sample counts, and metric units. Do not compare scores from different splits as if they were directly equivalent.'}</p>
                 </div>
               )}
 
