@@ -49,7 +49,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               </div>
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
               {mainTab === 'analysis' && (
                 <div className="grid grid-cols-2" style={{ height: '100%' }}>
                   {/* Left Column: Image Viewer */}
@@ -260,7 +260,7 @@ export default function Results({ result, imageFile, symptoms }: { result: any, 
               )}
 
               {mainTab === 'learn' && (
-                <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', margin: 0, padding: '16px' }}>
+                <div className="card" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', margin: 0, padding: '16px', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, marginBottom: '12px' }}>
                     <h3 style={{ margin: 0 }}>{t.learnAbout} </h3>
                     <select value={selectedCondition} onChange={(e) => setSelectedCondition(e.target.value)} style={{ width: 'auto', margin: 0, padding: '4px 8px' }}>
