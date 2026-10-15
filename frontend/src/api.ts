@@ -1,19 +1,18 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
 
-// Localhost is only a development fallback. Never silently point a deployed
-// frontend at the visitor's own computer.
-export const API_BASE =
-  configuredApiBase ||
-  (import.meta.env.DEV ? 'http://localhost:8000' : '');
+// In local development, use Vite's same-origin proxy so localhost/127.0.0.1
+// resolution and browser CORS settings cannot break calls to the local backend.
+// Deployed frontends must explicitly configure their backend URL.
+export const API_BASE = configuredApiBase || '';
 
 function getApiUrl(path: string) {
-  if (!API_BASE) {
+  if (!API_BASE && !import.meta.env.DEV) {
     throw new Error(
       'Backend URL is not configured. Set VITE_API_BASE_URL in the frontend deployment environment and rebuild.'
     );
   }
 
-  return `${API_BASE}${path}`;
+  return API_BASE ? `${API_BASE}${path}` : path;
 }
 
 export async function fetchHealth() {
@@ -70,7 +69,7 @@ export async function analyzeImage(file: File, symptoms: any) {
   } catch (err: any) {
     if (err instanceof TypeError) {
       throw new Error(
-        `Network error connecting to ${API_BASE}/api/analyze: ${err.message}`
+        `Network error connecting to ${API_BASE || 'the local Vite proxy'}/api/analyze: ${err.message}`
       );
     }
 
