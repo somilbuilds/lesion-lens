@@ -17,6 +17,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$env:PYTHONUNBUFFERED = "1"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $pythonExe = Join-Path $scriptDir "backend\venv\Scripts\python.exe"

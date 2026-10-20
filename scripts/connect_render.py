@@ -26,7 +26,11 @@ import urllib.request
 import urllib.error
 import json
 import argparse
+import functools
 from pathlib import Path
+
+# Ensure all prints flush immediately to terminal/logs
+print = functools.partial(print, flush=True)
 
 # Base Paths
 REPO_ROOT = Path(__file__).resolve().parent.parent
