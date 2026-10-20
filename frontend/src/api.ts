@@ -35,9 +35,26 @@ export async function fetchModelInfo() {
   return res.json();
 }
 
-export async function analyzeImage(file: File, symptoms: any) {
+export async function fetchConditions() {
+  const res = await fetch(getApiUrl('/api/conditions'));
+  if (!res.ok) throw new Error(`Condition library failed: ${res.status}`);
+  return res.json();
+}
+
+export async function analyzeImage(
+  file: File,
+  symptoms: any,
+  allowAiReport = false,
+  modelContext: Record<string, string> = {}
+) {
   const formData = new FormData();
   formData.append('image', file);
+  formData.append('allow_ai_report', String(allowAiReport));
+  for (const [key, value] of Object.entries(modelContext)) {
+    if (value !== undefined && value !== null && value !== '') {
+      formData.append(key === 'localization' ? 'body_region' : key, value);
+    }
+  }
 
   if (symptoms) {
     for (const [key, value] of Object.entries(symptoms)) {
@@ -62,9 +79,7 @@ export async function analyzeImage(file: File, symptoms: any) {
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error(
-        `Invalid response from API: ${text.slice(0, 300)}`
-      );
+      throw new Error(`Invalid response from API: ${text.slice(0, 300)}`);
     }
   } catch (err: any) {
     if (err instanceof TypeError) {
@@ -74,5 +89,32 @@ export async function analyzeImage(file: File, symptoms: any) {
     }
 
     throw err;
+  }
+}
+
+export async function sendCopilotMessage(
+  messages: Array<{ role: string; content: string }>,
+  context: Record<string, any>
+) {
+  try {
+    const res = await fetch(getApiUrl('/api/chat/copilot'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages, context }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Copilot chat failed (${res.status})`);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    console.error('Failed to communicate with copilot:', err);
+    return {
+      reply: 'Could not connect to the Clinical Copilot. Please check your backend connection.',
+      provider: 'error',
+    };
   }
 }

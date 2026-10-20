@@ -1,6 +1,5 @@
 import os
 import time
-import math
 import cv2
 import base64
 import torch
@@ -10,10 +9,39 @@ import timm
 from PIL import Image
 from io import BytesIO
 import matplotlib.cm as cm
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from .config import config
-from .segmentation import DefaultSegmenter
+from .vision_features import (
+    verify_skin_presence,
+    segment_lesion,
+    calculate_abcde_features,
+    synthesize_verbal_explanation,
+)
+
+
+class SkinFusionNet(torch.nn.Module):
+    """Checkpoint-compatible EfficientNet plus optional HAM10000 metadata head."""
+    def __init__(self, metadata_dim: int, pretrained: bool = False):
+        super().__init__()
+        self.mdim = int(metadata_dim)
+        self.encoder = timm.create_model("efficientnet_b0", pretrained=pretrained, num_classes=0)
+        image_dim = self.encoder.num_features
+        if self.mdim:
+            self.fusion = torch.nn.Sequential(
+                torch.nn.Linear(image_dim + self.mdim, 512), torch.nn.LayerNorm(512),
+                torch.nn.ReLU(), torch.nn.Dropout(0.35), torch.nn.Linear(512, len(config.classes)),
+            )
+        else:
+            self.fusion = torch.nn.Linear(image_dim, len(config.classes))
+
+    def forward(self, images: torch.Tensor, metadata: torch.Tensor = None) -> torch.Tensor:
+        features = self.encoder(images)
+        if self.mdim:
+            if metadata is None:
+                metadata = torch.zeros((len(images), self.mdim), device=images.device)
+            features = torch.cat([features, metadata], dim=1)
+        return self.fusion(features)
 
 # Image transformations for inference (exactly as training)
 # RGB, Resize(224) short side, CenterCrop(224), ToTensor, Normalize
@@ -48,22 +76,52 @@ def preprocess_image(img: Image.Image) -> torch.Tensor:
 class SkinModel:
     def __init__(self, model_path: str):
         self.device = torch.device('cpu')
+        if not os.path.isfile(model_path):
+            raise FileNotFoundError(f"Required model checkpoint is missing: {model_path}")
         
-        # Build with timm
-        self.model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)
-        if os.path.exists(model_path):
-            state_dict = torch.load(model_path, map_location=self.device, weights_only=False)
-            # handle cases where model weights are saved inside a model state dict
-            if 'state_dict' in state_dict:
-                state_dict = state_dict['state_dict']
-            elif 'model_state' in state_dict:
-                state_dict = state_dict['model_state']
-            self.model.load_state_dict(state_dict)
+        # Older app checkpoints include NumPy training metrics; allowlist only
+        # those inert NumPy types when using PyTorch's restricted loader.
+        numpy_core = getattr(np, "_core", None) or getattr(np, "core")
+        safe_types = [numpy_core.multiarray.scalar, np.dtype]
+        float64_dtype = getattr(getattr(np, "dtypes", None), "Float64DType", None)
+        if float64_dtype is not None:
+            safe_types.append(float64_dtype)
+        with torch.serialization.safe_globals(safe_types):
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
+
+        self.model_type = "efficientnet_b0_image_only_v1"
+        self.metadata_schema = None
+        self.metadata_dim = 0
+        self.temperature = config.temperature
+        if isinstance(checkpoint, dict) and "model_type" in checkpoint:
+            self.model_type = checkpoint["model_type"]
+            state_dict = checkpoint.get("model_state")
+            self.metadata_schema = checkpoint.get("metadata_schema")
+            self.temperature = float(checkpoint.get("temperature", config.temperature))
+            if self.model_type == "efficientnet_b0_metadata_fusion_v1":
+                if not isinstance(self.metadata_schema, dict):
+                    raise ValueError("Metadata-fusion checkpoint is missing metadata_schema")
+                self.metadata_dim = len(self.metadata_schema.get("feature_names", []))
+                if self.metadata_dim < 1:
+                    raise ValueError("Metadata-fusion checkpoint has an empty feature schema")
+                self.model = SkinFusionNet(self.metadata_dim, pretrained=False)
+            elif self.model_type == "efficientnet_b0_image_only_v1":
+                self.model = SkinFusionNet(0, pretrained=False)
+            else:
+                raise ValueError(f"Unsupported checkpoint model_type: {self.model_type}")
+        else:
+            self.model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)
+            state_dict = checkpoint
+            if isinstance(state_dict, dict) and "state_dict" in state_dict:
+                state_dict = state_dict["state_dict"]
+            elif isinstance(state_dict, dict) and "model_state" in state_dict:
+                state_dict = state_dict["model_state"]
+        if not isinstance(state_dict, dict):
+            raise ValueError("Model checkpoint does not contain a valid state dictionary")
+        self.model.load_state_dict(state_dict)
             
         self.model.to(self.device)
         self.model.eval()
-
-        self.segmenter = DefaultSegmenter()
 
         # Hooks for Grad-CAM
         self.activations = None
@@ -77,17 +135,51 @@ class SkinModel:
 
         # Attach hooks to the last conv block. 
         # For efficientnet_b0, model.conv_head is usually the last feature map before pooling.
-        if hasattr(self.model, 'conv_head'):
-            self.model.conv_head.register_forward_hook(forward_hook)
-            self.model.conv_head.register_full_backward_hook(backward_hook)
-        elif hasattr(self.model, 'bn2'):
-            self.model.bn2.register_forward_hook(forward_hook)
-            self.model.bn2.register_full_backward_hook(backward_hook)
+        feature_model = getattr(self.model, "encoder", self.model)
+        if hasattr(feature_model, 'conv_head'):
+            feature_model.conv_head.register_forward_hook(forward_hook)
+            feature_model.conv_head.register_full_backward_hook(backward_hook)
+        elif hasattr(feature_model, 'bn2'):
+            feature_model.bn2.register_forward_hook(forward_hook)
+            feature_model.bn2.register_full_backward_hook(backward_hook)
 
-    def generate_gradcam(self, input_tensor: torch.Tensor, class_idx: int) -> np.ndarray:
+    def encode_metadata(self, metadata: Dict[str, Any], batch_size: int = 1) -> torch.Tensor:
+        """Apply the training-time metadata schema; absent/unseen values map to unknown."""
+        schema = self.metadata_schema or {}
+        try:
+            age = float(metadata.get("age"))
+            age_missing = not np.isfinite(age)
+        except (TypeError, ValueError):
+            age, age_missing = float(schema.get("age_median", 0.0)), True
+        if age_missing:
+            age = float(schema.get("age_median", 0.0))
+        age = float(np.clip(age, schema.get("age_lower", age), schema.get("age_upper", age)))
+        age_z = (age - float(schema.get("age_median", 0.0))) / max(float(schema.get("age_std", 1.0)), 1e-6)
+        sex_categories = schema.get("sex_categories", ["unknown"])
+        location_categories = schema.get("localization_categories", ["unknown"])
+        sex = str(metadata.get("sex") or "unknown").strip().lower()
+        location = str(metadata.get("localization") or metadata.get("body_region") or "unknown").strip().lower()
+        if sex not in sex_categories:
+            sex = "unknown"
+        if location not in location_categories:
+            location = "unknown"
+        values = [age_z, float(age_missing)]
+        values.extend(float(sex == item) for item in sex_categories)
+        values.extend(float(location == item) for item in location_categories)
+        vector = torch.tensor(values, dtype=torch.float32, device=self.device)
+        return vector.unsqueeze(0).expand(batch_size, -1).contiguous()
+
+    def _forward(self, images: torch.Tensor, metadata: torch.Tensor = None) -> torch.Tensor:
+        if self.metadata_dim:
+            if metadata is None:
+                metadata = torch.zeros((len(images), self.metadata_dim), device=images.device)
+            return self.model(images, metadata)
+        return self.model(images)
+
+    def generate_gradcam(self, input_tensor: torch.Tensor, class_idx: int, metadata: torch.Tensor = None) -> np.ndarray:
         self.model.zero_grad()
         
-        output = self.model(input_tensor)
+        output = self._forward(input_tensor, metadata)
         
         # Calculate gradients for the target class
         target = output[0, class_idx]
@@ -124,7 +216,7 @@ class SkinModel:
         return "data:image/png;base64," + base64.b64encode(buffer.read()).decode('utf-8')
 
 
-    def _occlusion_explanation(self, input_tensor: torch.Tensor, class_idx: int) -> Dict[str, Any]:
+    def _occlusion_explanation(self, input_tensor: torch.Tensor, class_idx: int, metadata: torch.Tensor = None) -> Dict[str, Any]:
         """Measure how masking image patches changes the selected class score."""
         patch_size, step = 32, 28
         _, height, width = input_tensor.shape
@@ -132,7 +224,8 @@ class SkinModel:
                    for y in range(0, height - patch_size + 1, step)
                    for x in range(0, width - patch_size + 1, step)]
         with torch.no_grad():
-            baseline_logits = self.model(input_tensor.unsqueeze(0).to(self.device)) / config.temperature
+            baseline_metadata = metadata[:1] if metadata is not None else None
+            baseline_logits = self._forward(input_tensor.unsqueeze(0).to(self.device), baseline_metadata) / self.temperature
             baseline_prob = float(F.softmax(baseline_logits, dim=-1)[0, class_idx].item())
             drops = []
             for start in range(0, len(regions), 16):
@@ -141,7 +234,8 @@ class SkinModel:
                 for i, (x1, y1, x2, y2) in enumerate(region_batch):
                     # Zero in normalized space corresponds to ImageNet mean colour.
                     masked_batch[i, :, y1:y2, x1:x2] = 0.0
-                logits = self.model(masked_batch.to(self.device)) / config.temperature
+                mask_metadata = metadata[:1].expand(len(region_batch), -1) if metadata is not None else None
+                logits = self._forward(masked_batch.to(self.device), mask_metadata) / self.temperature
                 probs = F.softmax(logits, dim=-1)[:, class_idx].cpu().tolist()
                 drops.extend(baseline_prob - float(p) for p in probs)
         if not drops:
@@ -164,7 +258,7 @@ class SkinModel:
             "method": "32px patches, 28px stride; patches replaced with ImageNet mean colour"
         }
 
-    def analyze_image(self, img: Image.Image, symptoms: Dict[str, bool]) -> Dict[str, Any]:
+    def analyze_image(self, img: Image.Image, symptoms: Dict[str, bool], metadata: Dict[str, Any] = None) -> Dict[str, Any]:
         start_time = time.time()
         
         # 1. Validation checks on image content
@@ -174,6 +268,20 @@ class SkinModel:
         img_np = np.array(original_img)
         
         input_check = {"level": "ok", "reasons": []}
+        
+        # OOD Skin presence check
+        is_skin, skin_ratio, skin_msg = verify_skin_presence(img_np)
+        if not is_skin:
+            if skin_ratio < 0.05:
+                input_check["level"] = "reject"
+                input_check["reasons"].append(skin_msg)
+                return {
+                    "input_check": input_check,
+                    "inference_ms": int((time.time() - start_time) * 1000)
+                }
+            else:
+                input_check["level"] = "warning"
+                input_check["reasons"].append(skin_msg)
         
         # Image too small
         if img.width < config.min_short_side_px or img.height < config.min_short_side_px:
@@ -187,25 +295,6 @@ class SkinModel:
             input_check["level"] = "warning"
             input_check["reasons"].append("The photo appears very blurry.")
             
-        # Skin color check
-        # Naive approach in YCrCb space
-        ycrcb = cv2.cvtColor(img_np, cv2.COLOR_RGB2YCrCb)
-        mask_cr = (ycrcb[:,:,1] > 133) & (ycrcb[:,:,1] < 173)
-        mask_cb = (ycrcb[:,:,2] > 77) & (ycrcb[:,:,2] < 127)
-        skin_mask = mask_cr & mask_cb
-        skin_ratio = np.sum(skin_mask) / (img.width * img.height)
-        
-        if skin_ratio < 0.05:
-            # Maybe reject if it's purely synthetic or obviously non-skin
-            # e.g., a solid color or gradient
-            color_std = np.std(img_np, axis=(0, 1))
-            if np.all(color_std < 5):
-                input_check["level"] = "reject"
-                input_check["reasons"].append("Image lacks color variation and does not appear to be a photo of skin.")
-            else:
-                input_check["level"] = "warning"
-                input_check["reasons"].append("This does not look like a typical skin photo.")
-        
         if input_check["level"] == "reject":
             # Early return if rejected
             return {
@@ -221,11 +310,13 @@ class SkinModel:
         t_img_hv = torch.flip(t_img, dims=[1, 2])
         
         batch = torch.stack([t_img, t_img_h, t_img_v, t_img_hv]).to(self.device)
+        metadata = metadata or {}
+        metadata_tensor = self.encode_metadata(metadata, batch_size=4) if self.metadata_dim else None
         
         # 3. Model Inference (TTA)
         with torch.no_grad():
-            outputs = self.model(batch)
-            outputs = outputs / config.temperature
+            outputs = self._forward(batch, metadata_tensor)
+            outputs = outputs / self.temperature
             probs_batch = F.softmax(outputs, dim=-1).cpu().numpy()
             
         avg_probs = np.mean(probs_batch, axis=0)
@@ -246,65 +337,14 @@ class SkinModel:
         view_top_classes = [np.argmax(probs_batch[i]) for i in range(4)]
         view_agreement = sum(1 for c in view_top_classes if c == top1_idx) / 4.0
         
-        input_check_top_prob = float(np.max(avg_probs))
-        if input_check_top_prob < 0.2 and norm_entropy > 0.9:
-            # Overriding check if output is highly uncertain
-            if input_check["level"] != "warning":
-                input_check["level"] = "warning"
-                input_check["reasons"].append("The model is deeply uncertain. Ensure this is a clear, well-lit photo of a skin lesion.")
-                
-        # 4. Uncertainty
-        inconclusive = False
-        unc_level = "low"
-        
-        if top1_prob < config.uncertainty_prob_threshold or margin < config.uncertainty_margin_threshold or view_agreement < config.uncertainty_view_agreement_threshold:
-            inconclusive = True
-            unc_level = "high"
-        elif top1_prob < 0.7 or margin < 0.3:
-            unc_level = "moderate"
-            
-        # 5. Risk grouping
-        p_mel = float(avg_probs[config.classes.index("mel")])
-        p_bcc = float(avg_probs[config.classes.index("bcc")])
-        p_akiec = float(avg_probs[config.classes.index("akiec")])
-        
-        p_malignant = sum([float(avg_probs[config.classes.index(c)]) for c in config.malignant_group])
-        p_precancerous = sum([float(avg_probs[config.classes.index(c)]) for c in config.precancerous_group])
-        p_benign = sum([float(avg_probs[config.classes.index(c)]) for c in config.benign_group])
-        
-        tier = "routine_monitor"
-        reasons = []
-        
-        symptom_active = any(symptoms.get(s, False) for s in ["grew", "changed", "bleed", "itch", "hurt", "personal_skin_cancer_history"])
-        
-        # Urgent review logic
-        if p_mel >= 0.35:
-            tier = "urgent_review"
-            reasons.append("High model score for melanoma.")
-        elif any(symptoms.get(s, False) for s in ["grew", "changed", "bleed"]) and (p_mel + p_bcc + p_akiec >= 0.30):
-            tier = "urgent_review"
-            reasons.append("Patient reported concerning symptoms (growth/change/bleeding) combined with elevated model risk.")
-        
-        # See doctor soon logic (if not already urgent)
-        elif tier == "routine_monitor":
-            if p_mel >= 0.15:
-                tier = "see_doctor_soon"
-                reasons.append("Elevated model score for melanoma.")
-            elif (p_mel + p_bcc + p_akiec >= 0.40):
-                tier = "see_doctor_soon"
-                reasons.append("Elevated risk of pre-cancer or cancer.")
-            elif inconclusive:
-                tier = "see_doctor_soon"
-                reasons.append("The model's analysis was inconclusive.")
-            elif symptom_active:
-                tier = "see_doctor_soon"
-                reasons.append("Patient reported symptoms like itching, pain, or changes.")
-                
-        # 6. Grad-CAM
+        # Keep raw stability signals for research display. Do not derive care tiers or
+        # categorical confidence labels from unvalidated score thresholds.
+
+        # Grad-CAM
         # We need gradients, so re-run forward pass with require_grad on for the original image tensor
         t_img_grad = t_img.unsqueeze(0).clone()
         t_img_grad.requires_grad = True
-        gradcam = self.generate_gradcam(t_img_grad, top1_idx)
+        gradcam = self.generate_gradcam(t_img_grad, top1_idx, metadata_tensor[:1] if metadata_tensor is not None else None)
         
         # Upsample Grad-CAM to original image size
         w, h = original_img.size
@@ -343,26 +383,17 @@ class SkinModel:
         overlay_b64 = self._array_to_base64(overlay)
         heatmap_b64 = self._array_to_base64(heatmap_colored)
         
-        # Focus sanity check
-        focus_warning = False
-        # Calculate mass on the edges (let's say 15% margin)
-        margin_y = int(0.15 * h)
-        margin_x = int(0.15 * w)
-        edge_mask = np.ones((h, w), dtype=bool)
-        edge_mask[margin_y:-margin_y, margin_x:-margin_x] = False
-        total_mass = np.sum(full_gradcam)
-        if total_mass > 0:
-            edge_mass = np.sum(full_gradcam[edge_mask])
-            if edge_mass / total_mass > 0.6:
-                focus_warning = True
-                
-        # 7. Segmentation
-        # The segmenter uses the GradCAM
-        polygon = self.segmenter.segment(img_np, full_gradcam)
+        # Segment lesion & calculate clinical ABCDE metrics
+        lesion_mask, lesion_cnt, lesion_bbox = segment_lesion(img_np)
+        abcde_metrics = calculate_abcde_features(img_np, lesion_mask, lesion_cnt)
         
-
+        # Create lesion contour visualization
+        contour_viz = img_np.copy()
+        cv2.drawContours(contour_viz, [lesion_cnt], -1, (0, 235, 140), 2)
+        contour_b64 = self._array_to_base64(contour_viz)
+        
         # Explainability report: model-score evidence, stability, and perturbation sensitivity.
-        occlusion = self._occlusion_explanation(t_img, top1_idx)
+        occlusion = self._occlusion_explanation(t_img, top1_idx, metadata_tensor[:1] if metadata_tensor is not None else None)
         class_names = {
             "akiec": "actinic keratosis / intraepithelial carcinoma",
             "bcc": "basal cell carcinoma",
@@ -375,26 +406,17 @@ class SkinModel:
         top2_idx = int(top_indices[1])
         top2_class = config.classes[top2_idx]
         top2_prob = float(avg_probs[top2_idx])
-        if margin >= 0.30:
-            separation_text = "The leading class is clearly separated from the second-ranked class by the model's scores."
-        elif margin >= 0.10:
-            separation_text = "The leading class has a moderate score advantage; the runner-up remains relevant."
-        else:
-            separation_text = "The leading and second-ranked classes are close, so the ranking is not decisive."
         agreement_text = f"The same leading class appeared in {int(round(view_agreement * 4))} of 4 original/flip views."
         if occlusion.get("available"):
             drop_pp = occlusion["max_probability_drop"] * 100
-            if drop_pp >= 5:
-                occlusion_text = f"Masking the most influential tested 32-pixel patch reduced the leading-class score by {drop_pp:.1f} percentage points in a single-view occlusion test."
-            else:
-                occlusion_text = f"The largest tested patch-masking change in the leading-class score was {drop_pp:.1f} percentage points; this test found no large localized score drop."
+            occlusion_text = f"Masking the most influential tested 32-pixel patch changed the leading-class score by up to {drop_pp:.1f} percentage points in this perturbation test."
         else:
             occlusion_text = "Patch occlusion analysis was unavailable."
         explanation_report = {
             "headline": f"The model ranked {class_names.get(top1_class, top1_class)} highest.",
             "narrative": [
                 f"The leading class score was {top1_prob * 100:.1f}%; the second-ranked class was {class_names.get(top2_class, top2_class)} at {top2_prob * 100:.1f}%. These are model scores, not calibrated probabilities of disease.",
-                f"The score margin was {margin * 100:.1f} percentage points. {separation_text}",
+                f"The score margin was {margin * 100:.1f} percentage points; this is a comparison of model scores, not a measure of diagnostic certainty.",
                 f"Normalized prediction entropy was {norm_entropy:.3f} on a 0–1 scale; higher values mean scores are more spread out.",
                 agreement_text,
                 occlusion_text,
@@ -409,46 +431,48 @@ class SkinModel:
                 "occlusion": occlusion
             }
         }
-        # 9. Guidance text
-        guidance = []
-        if symptoms.get("grew", False):
-            guidance.append("You noted growth. Tell the doctor how fast it has been growing.")
-        if symptoms.get("changed", False):
-            guidance.append("You noted a change. Describe exactly what looks different (color, shape).")
-        if symptoms.get("bleed", False):
-            guidance.append("You noted bleeding. Mention if it bled without being scratched or bumped.")
-            
+        verbal_explanation = synthesize_verbal_explanation(
+            top1_class,
+            class_names.get(top1_class, top1_class),
+            top1_prob,
+            class_names.get(top2_class, top2_class),
+            top2_prob,
+            abcde_metrics,
+            {"view_agreement": view_agreement}
+        )
+        
         result = {
-            "probabilities": {config.classes[i]: float(avg_probs[i]) for i in range(len(config.classes))},
+            "scores": {config.classes[i]: float(avg_probs[i]) for i in range(len(config.classes))},
+            "abcde": abcde_metrics,
+            "verbal_explanation": verbal_explanation,
+            "contour_overlay": contour_b64,
+            "lesion_bbox": lesion_bbox,
+            "view_scores": [
+                {"view": name, "scores": {config.classes[i]: float(probs_batch[view_idx][i]) for i in range(len(config.classes))}}
+                for view_idx, name in enumerate(("original", "horizontal_flip", "vertical_flip", "horizontal_vertical_flip"))
+            ],
             "explanation_report": explanation_report,
-            "top3": [{"class": config.classes[idx], "prob": float(avg_probs[idx])} for idx in top_indices[:3]],
-            "inconclusive": inconclusive,
+            "top3": [{"class": config.classes[idx], "score": float(avg_probs[idx])} for idx in top_indices[:3]],
             "uncertainty": {
                 "margin": margin,
                 "entropy": norm_entropy,
-                "view_agreement": view_agreement,
-                "level": unc_level
+                "view_agreement": view_agreement
             },
-            "risk": {
-                "tier": tier,
-                "group_probs": {
-                    "malignant": p_malignant,
-                    "precancerous": p_precancerous,
-                    "benign": p_benign
+            "model_context": {
+                "metadata_supported": bool(self.metadata_dim),
+                "metadata_used": bool(self.metadata_dim),
+                "provided": {
+                    "age": metadata.get("age") not in (None, ""),
+                    "sex": metadata.get("sex") not in (None, "", "unknown"),
+                    "localization": metadata.get("localization", metadata.get("body_region")) not in (None, "", "unknown"),
                 },
-                "reasons": reasons
+                "feature_names": (self.metadata_schema or {}).get("feature_names", []),
             },
             "input_check": input_check,
             "gradcam": {
                 "overlay": overlay_b64,
-                "heatmap": heatmap_b64,
-                "focus_warning": "The model may be reacting to the image edge or background, not the lesion." if focus_warning else None
+                "heatmap": heatmap_b64
             },
-            "outline": {
-                "polygon": polygon,
-                "method": "Approximate region of interest, not a medical segmentation."
-            },
-            "guidance": guidance,
             "inference_ms": int((time.time() - start_time) * 1000)
         }
         

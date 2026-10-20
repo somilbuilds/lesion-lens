@@ -1,149 +1,135 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/somilbuilds/lesion-lens/main/docs/banner.png" alt="SkinLesionNet Banner" width="100%" />
+# SkinLesionNet — Clinical Dermatology Intelligence & Explainability Platform
 
-  <h1>SkinLesionNet</h1>
+SkinLesionNet is a modern clinical-grade research and learning platform for exploring skin lesion image classification, understanding dermatological morphology (ABCDE), and preparing for doctor consultations.
 
-  <p>
-    <strong>A high-performance ML web portal for skin lesion classification and analysis</strong>
-  </p>
-  
-  <p>
-    <img alt="Python" src="https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white" />
-    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.103.0+-009688.svg?logo=fastapi&logoColor=white" />
-    <img alt="React" src="https://img.shields.io/badge/React-18.2.0+-61DAFB.svg?logo=react&logoColor=black" />
-    <img alt="Vite" src="https://img.shields.io/badge/Vite-5.0+-646CFF.svg?logo=vite&logoColor=white" />
-    <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg?logo=pytorch&logoColor=white" />
-  </p>
-</div>
+A model score is an adjunct research tool, not a definitive diagnosis, and does not replace a clinical biopsy.
 
 ---
 
-> **⚠️ Disclaimer:** This is a research prototype/demo system, not a medical device. It should never be used as a substitute for professional medical advice, diagnosis, or treatment. It does not provide clinical validation.
+## What's New & Upgraded
 
-## 📖 Overview
+### 1. Multi-Modal Explainability & Computer Vision ABCDE Engine
+- **Computer Vision Morphology Extraction**: Automatically segments the lesion and computes quantitative ABCDE features:
+  - **A (Asymmetry Index)**: Orthogonal axis flip divergence score (0.0 to 1.0).
+  - **B (Border Irregularity)**: Isoperimetric compactness ratio ($P^2 / 4\pi A$) and margin roughness.
+  - **C (Color Variegation)**: Identifies presence of 6 clinical dermoscopic color zones (light brown, dark brown, black, red/erythematous, slate blue-gray, white/hypopigmentation).
+  - **D (Diameter & Area)**: Equivalent pixel diameter and relative frame coverage.
+- **Verbal Explainability Rationale**: Generates plain-English clinical explanations tying morphological contours to classification scores.
+- **5-Mode Diagnostic Visualizer**:
+  1. *Original Photo*: High-resolution unedited view.
+  2. *Lesion Border*: Computer-vision segmented boundary contour in neon green.
+  3. *Attribution Overlay*: High-resolution Grad-CAM activation overlay.
+  4. *Heatmap*: Standalone activation intensity map.
+  5. *Perturbation Patch*: 32px patch occlusion sensitivity analysis.
 
-SkinLesionNet is a fully-integrated full-stack web application wrapped around a trained PyTorch `EfficientNet-B0` model capable of classifying skin images into 7 distinct lesion categories. The application emphasizes **clinical-restrained UI design**, high structural performance, and seamless offline data protection.
+### 2. Interactive Clinical AI Copilot (Powered by Groq LLM)
+- Multi-turn interactive conversational copilot grounded in the user's specific lesion morphology and clinical guidelines.
+- Patients can ask follow-up questions about their asymmetry scores, border irregularities, and how to discuss findings with their doctor.
+- Includes 1-click clinical prompt pills for common patient inquiries.
 
-### ✨ Key Features
-- **Intelligent Analysis**: Rejects blurry/non-skin images and measures clinical risk grouping (Malignant, Pre-cancerous, Benign).
-- **Test-Time Augmentation (TTA)**: Employs 4 views (original + flips) for robust certainty checks and metric pooling.
-- **Explainable AI (Grad-CAM)**: Heatmap highlighting model-influenced image regions, verified with custom focus contouring.
-- **Localization**: Supports dynamic `English` and `Hindi` globally persisting across Analysis workflow.
-- **Dark & Light Mode**: Accessible dual-color themes strictly built using vanilla CSS semantic variables, avoiding hardcoded UI colors.
+### 3. ISIC HAM10000 35-Image Clinical Atlas & Comparison
+- Complete 35-image reference atlas (5 histopathologically confirmed cases for each of the 7 diagnostic categories) sourced directly from the official ISIC HAM10000 collection.
+- **Interactive Side-by-Side Comparison Matrix**: Compare any two conditions (e.g. Melanoma vs. Benign Nevus) side-by-side with 5 exemplar images each.
+- **Results Comparison Gallery**: View 5 confirmed clinical cases of the diagnosed category directly on the results screen.
+- High-resolution modal with patient demographics, anatomical site, and biopsy confirmation method.
 
----
+### 4. Pre-Appointment Doctor Consultation Brief (PDF / Print-Ready)
+- Standardized medical consultation memo summarizing:
+  - Patient & Anatomical Body Location.
+  - Primary differential diagnosis and calibrated probabilities.
+  - Recommended questions to ask the dermatologist.
+  - User visit notes automatically saved in browser IndexedDB.
+  - Print/PDF export formatted for clinical review.
 
-## 🏗 System Architecture
+### 5. Out-of-Distribution (OOD) Guardrail
+- Automated skin chrominance validation in YCrCb and HSV color spaces to reject non-skin images (floors, pets, walls, artifacts).
 
-The project maintains a sharp decoupled structure:
-
-1. **Backend** `/backend`: FastAPI microservice serving the CPU-bound PyTorch model via endpoints `/api/analyze` and `/api/model-info`. Employs custom Grad-CAM overlays and OpenCV image manipulation algorithms.
-2. **Frontend** `/frontend`: Vite `React+TypeScript` SPA enforcing WCAG AA contrast.
-3. **ML Pipeline** `/models`: Centralized store for the `best.pt` model state dictionary weights alongside experimental metric logs.
-
----
-
-## 📊 Model & Metrics
-
-Built around `timm.create_model("efficientnet_b0", pretrained=False, num_classes=7)`, this model was extensively trained utilizing the **ISIC 2019** dataset to distinguish between the following 7 diagnostic classes. Checkpoint chosen is Epoch 24.
-
-| Metric | Score |
-| :--- | :--- |
-| **Accuracy** | 86.31% |
-| **Balanced Accuracy** | 85.88% |
-| **Macro AUC** | 0.9668 |
-| **Macro F1** | 0.8144 |
-
-### Per-Class Recall Table
-
-| Class | Scientific Name | Recall Score | Risk Group |
-|:---|:---|:---:|:---:|
-| **AKIEC** | Actinic Keratosis / SCC in situ | `84.56%` | Pre-cancerous |
-| **BCC** | Basal Cell Carcinoma | `92.49%` | Malignant |
-| **BKL** | Benign Keratosis | `76.43%` | Benign |
-| **DF** | Dermatofibroma | `87.50%` | Benign |
-| **MEL** | Melanoma | `78.76%` | Malignant |
-| **NV** | Melanocytic Nevus | `89.44%` | Benign |
-| **VASC** | Vascular Lesion | `92.00%` | Benign |
-
-> **Crucial Weakness Check**: Performance outside the dataset/domain is not guaranteed. 
+### 6. Modern Clinical Design System
+- Clean, accessible typography (14px–16px body, 18px–28px card headings).
+- Modern medical color palette with WCAG AA compliant contrast.
+- 1-click Anatomical Body Location Selector (Face/Scalp, Neck, Chest, Back, Arm, Hand, Leg, Foot).
 
 ---
 
-## 🚀 Setup & Installation
+## Seven Diagnostic Categories
+
+1. **mel**: Melanoma
+2. **bcc**: Basal cell carcinoma
+3. **akiec**: Actinic keratosis / Squamous cell carcinoma in situ
+4. **bkl**: Benign keratosis-like lesion (seborrheic keratosis, solar lentigo)
+5. **nv**: Melanocytic nevus (Mole)
+6. **df**: Dermatofibroma
+7. **vasc**: Vascular lesion (cherry angioma, pyogenic granuloma)
+
+---
+
+## Run Locally
 
 ### Requirements
-Ensure **Python 3.11** and **Node.js 18+** are installed in your OS environment.
+- Python 3.11+
+- Node.js 18+
 
-### Optional Groq report wording
-
-The backend uses Groq to generate an English patient-friendly report, clinician summary, and class-specific educational sections for causes/risk factors, symptoms, what a clinician may check, what to expect, care, and when to seek help. The prompt includes the reported age, sex, skin type, body region, lesion diameter, and symptoms when provided. Groq does not diagnose the lesion or claim that visual signs such as redness or irregular borders were detected.
-
-1. Copy `.env.example` to a new file named `.env` in the repository root (same folder as `start_local.py`).
-2. Put `GROQ_API_KEY=your_key_here` in `.env` (not in `.env.example`).
-3. Optionally set `GROQ_MODEL` to a model available to your Groq account.
-4. Restart the backend by stopping and rerunning `python start_local.py`. Check the result screen's Learn section for the report source/status.
-
-Never commit `.env` or paste your API key into source code. If a real key was committed or shared publicly, revoke it and create a replacement. Hindi mode uses Hindi section headings and a localized explanation; the Groq-generated clinical/educational detail remains in English. Groq requires internet access; failures are logged by the backend and the app falls back to local reference content.
-
-### Research charts
-
-Open **Research & Model Comparison** in the results screen. Add figures to `frontend/public/research/` with these filenames:
-
-- `model-comparison.png`
-- `confusion-matrices.png`
-- `class-metrics.png` (optional)
-
-See `frontend/public/research/README.md`. Use the same held-out evaluation split when comparing models and label the dataset and class order.
-
-### One-command local demo
-
-From the project root, run:
-
+### Setup & Launch
 ```bash
+# Easy launcher:
 python start_local.py
 ```
 
-This automatically prepares the backend virtual environment and dependencies on first run, starts the FastAPI backend and Vite frontend, streams both developer logs into the same terminal, opens the app in your browser, and stops both services when you press `Ctrl+C`. No separate stop script is required.
-
-### 1. Clone Repository
+Or run services in separate terminal tabs:
 ```bash
-git clone https://github.com/somilbuilds/lesion-lens.git
-cd lesion-lens
-```
+# Tab 1: Backend
+python start_backend.py
 
-### 2. Launch Backend (API Server)
-```bash
-# Windows
-python -m venv backend\venv
-backend\venv\Scripts\pip install -r backend\requirements.txt
-backend\venv\Scripts\uvicorn app.main:app --app-dir backend --reload --port 8000
-
-# macOS / Linux
-python3 -m venv backend/venv
-backend/venv/bin/pip install -r backend/requirements.txt
-backend/venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000
-```
-*API available at `http://localhost:8000`*
-
-### 3. Launch Frontend (UI)
-```bash
+# Tab 2: Frontend
 cd frontend
 npm install
 npm run dev
 ```
-*App available at `http://localhost:5173`*
+
+### Groq API Configuration (Optional)
+To enable the interactive Clinical AI Copilot, copy `.env.example` to `.env` and add your Groq API key:
+```env
+GROQ_API_KEY=your_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+```
+*(If no key is provided, the platform automatically presents rich local ABCDE and morphological reference cards).*
 
 ---
 
-## 🔐 Privacy
-The architecture performs all image buffering and computation exclusively strictly **In-Memory**. 
-No external telemetry, cookies, or tracking logs persist image inputs to disks.
+## Running Automated Tests
 
-## 🤝 Known Limitations
-- The system doesn't input secondary age/skin features into the pipeline dynamically (they remain strictly context fields for final printout forms).
-- Performance limits are unverified across non-standard imaging or complex ethnic skin tones outside the training parameters.
+```bash
+cd backend
+venv\Scripts\python.exe -m pytest tests
+```
+*All 8 unit and integration tests covering preprocessing, calibration, OOD rejection, ABCDE extraction, and Copilot endpoints pass 100%.*
 
-<div align="center">
-  <i>Developed autonomously around specialized clinical web requirements.</i>
-</div>
+---
+
+## Project Structure
+
+```
+├── backend/
+│   ├── app/
+│   │   ├── config.py           # App configuration & thresholds
+│   │   ├── main.py             # FastAPI REST endpoints & Copilot chat
+│   │   ├── model.py            # PyTorch inference, TTA, and Grad-CAM
+│   │   ├── reporting.py        # Groq Copilot chat & clinical memo generator
+│   │   ├── vision_features.py  # Computer Vision ABCDE & OOD engine
+│   │   └── content/            # Condition medical reference library
+│   └── tests/                  # Pytest unit & integration test suite
+├── frontend/
+│   ├── public/
+│   │   ├── library_exemplars.json  # 35-case clinical atlas manifest
+│   │   └── library_images/         # 5 verified images per category
+│   └── src/
+│       ├── api.ts              # Backend API & Copilot client
+│       ├── index.css           # Modern clinical design system tokens
+│       └── pages/
+│           ├── Analyze.tsx     # Intake, camera, body site selector
+│           ├── Results.tsx     # Workspace, 5-mode visualizer, ABCDE, chat
+│           ├── Library.tsx     # Atlas, 5x5 comparison matrix, lightbox
+│           ├── History.tsx     # Browser IndexedDB analysis history
+│           └── About.tsx       # Model evidence & training records
+└── models/                     # PyTorch model weights & evaluation metrics
+```

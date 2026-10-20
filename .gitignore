@@ -43,6 +43,10 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
+# Installers and temp
+*.msi
+download_library_images.py
+
 # Models & Media
 *.jpg
 *.jpeg
@@ -50,6 +54,9 @@ frontend/yarn-error.log*
 *.webp
 !docs/*.png
 !frontend/public/research/*.png
+!frontend/public/library_images/**
+!frontend/src/assets/*.png
+!frontend/src/assets/*.svg
 
 # OS
 .DS_Store

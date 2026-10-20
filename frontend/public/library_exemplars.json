@@ -1,0 +1,366 @@
+{
+  "mel": [
+    {
+      "isic_id": "ISIC_0024310",
+      "local_url": "/library_images/mel/ISIC_0024310.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024310_thumbnail.jpg",
+      "diagnosis": "Melanoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 60,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024313",
+      "local_url": "/library_images/mel/ISIC_0024313.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024313_thumbnail.jpg",
+      "diagnosis": "Melanoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "female",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024315",
+      "local_url": "/library_images/mel/ISIC_0024315.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024315_thumbnail.jpg",
+      "diagnosis": "Melanoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 55,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024323",
+      "local_url": "/library_images/mel/ISIC_0024323.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024323_thumbnail.jpg",
+      "diagnosis": "Melanoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024333",
+      "local_url": "/library_images/mel/ISIC_0024333.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024333_thumbnail.jpg",
+      "diagnosis": "Melanoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 85,
+      "sex": "male",
+      "site": "Lower extremity"
+    }
+  ],
+  "bcc": [
+    {
+      "isic_id": "ISIC_0024331",
+      "local_url": "/library_images/bcc/ISIC_0024331.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024331_thumbnail.jpg",
+      "diagnosis": "Basal cell carcinoma",
+      "diagnosis_confirm": "histopathology",
+      "age": 65,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024332",
+      "local_url": "/library_images/bcc/ISIC_0024332.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024332_thumbnail.jpg",
+      "diagnosis": "Basal cell carcinoma",
+      "diagnosis_confirm": "histopathology",
+      "age": 60,
+      "sex": "male",
+      "site": "Skin"
+    },
+    {
+      "isic_id": "ISIC_0024345",
+      "local_url": "/library_images/bcc/ISIC_0024345.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024345_thumbnail.jpg",
+      "diagnosis": "Basal cell carcinoma",
+      "diagnosis_confirm": "histopathology",
+      "age": 85,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024360",
+      "local_url": "/library_images/bcc/ISIC_0024360.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024360_thumbnail.jpg",
+      "diagnosis": "Basal cell carcinoma",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "female",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024403",
+      "local_url": "/library_images/bcc/ISIC_0024403.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024403_thumbnail.jpg",
+      "diagnosis": "Basal cell carcinoma",
+      "diagnosis_confirm": "histopathology",
+      "age": 65,
+      "sex": "male",
+      "site": "Trunk"
+    }
+  ],
+  "akiec": [
+    {
+      "isic_id": "ISIC_0024329",
+      "local_url": "/library_images/akiec/ISIC_0024329.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024329_thumbnail.jpg",
+      "diagnosis": "Squamous cell carcinoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 75,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024372",
+      "local_url": "/library_images/akiec/ISIC_0024372.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024372_thumbnail.jpg",
+      "diagnosis": "Squamous cell carcinoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 70,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024418",
+      "local_url": "/library_images/akiec/ISIC_0024418.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024418_thumbnail.jpg",
+      "diagnosis": "Squamous cell carcinoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 75,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024450",
+      "local_url": "/library_images/akiec/ISIC_0024450.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024450_thumbnail.jpg",
+      "diagnosis": "Squamous cell carcinoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "male",
+      "site": "Upper extremity"
+    },
+    {
+      "isic_id": "ISIC_0024463",
+      "local_url": "/library_images/akiec/ISIC_0024463.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024463_thumbnail.jpg",
+      "diagnosis": "Squamous cell carcinoma, NOS",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "male",
+      "site": "Upper extremity"
+    }
+  ],
+  "bkl": [
+    {
+      "isic_id": "ISIC_0024312",
+      "local_url": "/library_images/bkl/ISIC_0024312.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024312_thumbnail.jpg",
+      "diagnosis": "Pigmented benign keratosis",
+      "diagnosis_confirm": "histopathology",
+      "age": 75,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024324",
+      "local_url": "/library_images/bkl/ISIC_0024324.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024324_thumbnail.jpg",
+      "diagnosis": "Pigmented benign keratosis",
+      "diagnosis_confirm": "histopathology",
+      "age": 85,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024336",
+      "local_url": "/library_images/bkl/ISIC_0024336.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024336_thumbnail.jpg",
+      "diagnosis": "Pigmented benign keratosis",
+      "diagnosis_confirm": "histopathology",
+      "age": 50,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024337",
+      "local_url": "/library_images/bkl/ISIC_0024337.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024337_thumbnail.jpg",
+      "diagnosis": "Pigmented benign keratosis",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 50,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024338",
+      "local_url": "/library_images/bkl/ISIC_0024338.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024338_thumbnail.jpg",
+      "diagnosis": "Pigmented benign keratosis",
+      "diagnosis_confirm": "histopathology",
+      "age": 45,
+      "sex": "female",
+      "site": "Head and neck"
+    }
+  ],
+  "nv": [
+    {
+      "isic_id": "ISIC_0024306",
+      "local_url": "/library_images/nv/ISIC_0024306.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024306_thumbnail.jpg",
+      "diagnosis": "Nevus",
+      "diagnosis_confirm": "serial imaging showing no change",
+      "age": 45,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024307",
+      "local_url": "/library_images/nv/ISIC_0024307.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024307_thumbnail.jpg",
+      "diagnosis": "Nevus",
+      "diagnosis_confirm": "serial imaging showing no change",
+      "age": 50,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024308",
+      "local_url": "/library_images/nv/ISIC_0024308.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024308_thumbnail.jpg",
+      "diagnosis": "Nevus",
+      "diagnosis_confirm": "serial imaging showing no change",
+      "age": 55,
+      "sex": "female",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024309",
+      "local_url": "/library_images/nv/ISIC_0024309.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024309_thumbnail.jpg",
+      "diagnosis": "Nevus",
+      "diagnosis_confirm": "serial imaging showing no change",
+      "age": 40,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024311",
+      "local_url": "/library_images/nv/ISIC_0024311.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024311_thumbnail.jpg",
+      "diagnosis": "Nevus",
+      "diagnosis_confirm": "serial imaging showing no change",
+      "age": 75,
+      "sex": "female",
+      "site": "Trunk"
+    }
+  ],
+  "df": [
+    {
+      "isic_id": "ISIC_0024318",
+      "local_url": "/library_images/df/ISIC_0024318.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024318_thumbnail.jpg",
+      "diagnosis": "Dermatofibroma",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 65,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024330",
+      "local_url": "/library_images/df/ISIC_0024330.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024330_thumbnail.jpg",
+      "diagnosis": "Dermatofibroma",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 40,
+      "sex": "male",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024386",
+      "local_url": "/library_images/df/ISIC_0024386.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024386_thumbnail.jpg",
+      "diagnosis": "Dermatofibroma",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 40,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024396",
+      "local_url": "/library_images/df/ISIC_0024396.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024396_thumbnail.jpg",
+      "diagnosis": "Dermatofibroma",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 65,
+      "sex": "female",
+      "site": "Lower extremity"
+    },
+    {
+      "isic_id": "ISIC_0024553",
+      "local_url": "/library_images/df/ISIC_0024553.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024553_thumbnail.jpg",
+      "diagnosis": "Dermatofibroma",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 50,
+      "sex": "female",
+      "site": "Upper extremity"
+    }
+  ],
+  "vasc": [
+    {
+      "isic_id": "ISIC_0024370",
+      "local_url": "/library_images/vasc/ISIC_0024370.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024370_thumbnail.jpg",
+      "diagnosis": "Benign soft tissue proliferations - Vascular",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 55,
+      "sex": "male",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024375",
+      "local_url": "/library_images/vasc/ISIC_0024375.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024375_thumbnail.jpg",
+      "diagnosis": "Benign soft tissue proliferations - Vascular",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 70,
+      "sex": "female",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024402",
+      "local_url": "/library_images/vasc/ISIC_0024402.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024402_thumbnail.jpg",
+      "diagnosis": "Benign soft tissue proliferations - Vascular",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": null,
+      "sex": "female",
+      "site": "Trunk"
+    },
+    {
+      "isic_id": "ISIC_0024475",
+      "local_url": "/library_images/vasc/ISIC_0024475.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024475_thumbnail.jpg",
+      "diagnosis": "Benign soft tissue proliferations - Vascular",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 35,
+      "sex": "male",
+      "site": "Head and neck"
+    },
+    {
+      "isic_id": "ISIC_0024662",
+      "local_url": "/library_images/vasc/ISIC_0024662.jpg",
+      "remote_thumb": "https://isic-archive.s3.amazonaws.com/thumbnails/ISIC_0024662_thumbnail.jpg",
+      "diagnosis": "Benign soft tissue proliferations - Vascular",
+      "diagnosis_confirm": "single image expert consensus",
+      "age": 75,
+      "sex": "male",
+      "site": "Trunk"
+    }
+  ]
+}

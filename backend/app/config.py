@@ -15,19 +15,11 @@ class Config:
                 pass
         
         self.classes = ["akiec", "bcc", "bkl", "df", "mel", "nv", "vasc"]
-        self.malignant_group = ["mel", "bcc"]
-        self.precancerous_group = ["akiec"]
-        self.benign_group = ["nv", "bkl", "df", "vasc"]
-        
         self.tta_views = 4 # Original, hflip, vflip, both
-        
-        # Thresholds
-        self.uncertainty_prob_threshold = 0.5
-        self.uncertainty_margin_threshold = 0.15
-        self.uncertainty_view_agreement_threshold = 0.75
 
         # Image limits
         self.max_image_size_mb = 10
+        self.max_image_pixels = 20_000_000
         self.min_short_side_px = 100
 
 config = Config()

@@ -1,484 +1,871 @@
-import { useState, useMemo } from 'react';
-import { AlertTriangle, Info, Printer } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  ArrowLeft,
+  BookOpen,
+  ExternalLink,
+  Info,
+  Printer,
+  ScanEye,
+  Sparkles,
+  Send,
+  Activity,
+  Layers,
+  FileText,
+  ShieldCheck,
+  Eye,
+  X
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../Context';
 import { translations } from '../i18n';
+import { updateAnalysisHistory } from '../history';
+import { sendCopilotMessage } from '../api';
 
-export default function Results({ result, imageFile, symptoms }: { result: any, imageFile: File | null, symptoms: any }) {
-  const [opacity, setOpacity] = useState(0.5);
-  const [showOutline, setShowOutline] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [mainTab, setMainTab] = useState<'analysis' | 'learn' | 'appointment'>('analysis');
-  
-  const imgUrl = useMemo(() => imageFile ? URL.createObjectURL(imageFile) : '', [imageFile]);
+type Props = {
+  result: any;
+  imageFile: File | null;
+  symptoms: any;
+  patient?: { name: string; gender: string };
+  historyError?: string;
+  historyId?: string;
+  firstNoticed?: string;
+};
 
-  if (!result) return <div>{translations['en'].noResult}</div>;
+const classKeys = ['akiec', 'bcc', 'bkl', 'df', 'mel', 'nv', 'vasc'];
+const labelMap: Record<string, string> = {
+  akiec: 'Actinic keratosis / in-situ carcinoma',
+  bcc: 'Basal cell carcinoma',
+  bkl: 'Benign keratosis-like lesion',
+  df: 'Dermatofibroma',
+  mel: 'Melanoma',
+  nv: 'Melanocytic nevus (Mole)',
+  vasc: 'Vascular lesion',
+};
 
+const detailLabels: Record<string, string> = {
+  changed: 'Changed in size, shape, or color',
+  grew: 'Grown rapidly',
+  bleed: 'Bled without scratching',
+  itch: 'Itchy or uncomfortable',
+  hurt: 'Painful or tender',
+  personal_skin_cancer_history: 'Personal history of skin cancer',
+};
+
+export default function Results({
+  result,
+  imageFile,
+  symptoms,
+  patient = { name: '', gender: '' },
+  historyError = '',
+  historyId = '',
+  firstNoticed = '',
+}: Props) {
   const { lang } = useAppContext();
   const t = translations[lang];
 
-  const { input_check, top3, inconclusive, uncertainty, risk, gradcam, outline, content, guidance } = result;
+  const [imageUrl, setImageUrl] = useState('');
+  const [vizMode, setVizMode] = useState<'original' | 'contour' | 'overlay' | 'heatmap' | 'occlusion'>('contour');
+  const [notes, setNotes] = useState('');
+  const [activeView, setActiveView] = useState('average');
+  const [exemplars, setExemplars] = useState<Record<string, any[]>>({});
+  const [activeModalExemplar, setActiveModalExemplar] = useState<any | null>(null);
 
-  const topConditionKey = top3?.[0]?.class || 'nv';
-  const [selectedCondition, setSelectedCondition] = useState(topConditionKey);
+  // Copilot Chat state
+  const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string }>>([
+    {
+      role: 'assistant',
+      content:
+        "Hello! I am your SkinLesionNet Clinical Copilot. I've reviewed your image's ABCDE morphological findings and classification scores. Ask me anything about your results, what the scores mean, or how to prepare for your doctor's appointment.",
+    },
+  ]);
+  const [inputQuestion, setInputQuestion] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
-  const conditionData = content?.[selectedCondition] || {};
+  useEffect(() => {
+    if (!imageFile) {
+      setImageUrl('');
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
 
-  const handlePrint = () => window.print();
+  useEffect(() => {
+    if (!historyId) return;
+    const timer = window.setTimeout(() => {
+      void updateAnalysisHistory(historyId, { notes }).catch(() => undefined);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [historyId, notes]);
+
+  useEffect(() => {
+    fetch('/library_exemplars.json')
+      .then((r) => r.json())
+      .then((data) => setExemplars(data))
+      .catch((err) => console.warn('Could not load library exemplars:', err));
+  }, []);
+
+  if (!result) {
+    return (
+      <main className="result-empty">
+        <h1>No image result to show</h1>
+        <p>Start with an image to explore a model result.</p>
+        <Link className="button-primary" to="/">
+          Return to image explorer
+        </Link>
+      </main>
+    );
+  }
+
+  const {
+    input_check,
+    top3 = [],
+    scores = {},
+    view_scores = [],
+    uncertainty = {},
+    gradcam = {},
+    content = {},
+    language_reports: report,
+    explanation_report: explanation,
+    abcde = {},
+    verbal_explanation: verbalExp = {},
+    contour_overlay: contourB64,
+  } = result;
+
+  const modelContext = result.model_context || {};
+  const activeScores =
+    activeView === 'average'
+      ? scores
+      : view_scores.find((view: any) => view.view === activeView)?.scores || scores;
+  const top3Fallback = Object.fromEntries(top3.map((item: any) => [item.class, item.score]));
+  const scoreRows = classKeys
+    .map((key) => [key, Number(activeScores[key] ?? top3Fallback[key] ?? 0)] as [string, number])
+    .sort((a, b) => b[1] - a[1]);
+  const topClass = top3[0]?.class || scoreRows[0]?.[0] || 'unknown';
+  const condition = content[topClass] || {};
+  const positives = Object.entries(symptoms || {})
+    .filter(([key, value]) => key in detailLabels && Boolean(value))
+    .map(([key]) => detailLabels[key]);
+
+  const scoreLabel = (key: string) => {
+    const translated = t[key as keyof typeof t];
+    if (translated) return translated;
+    if (condition?.name && key === topClass) return condition.name;
+    return labelMap[key] || key.toUpperCase();
+  };
+
+  const handleSendChat = async (questionText?: string) => {
+    const textToSend = (questionText || inputQuestion).trim();
+    if (!textToSend || chatLoading) return;
+
+    const newMessages = [...chatMessages, { role: 'user', content: textToSend }];
+    setChatMessages(newMessages);
+    setInputQuestion('');
+    setChatLoading(true);
+
+    const contextPayload = {
+      top_class_key: topClass,
+      top_class_name: labelMap[topClass] || topClass,
+      top_score: top3[0]?.score || scoreRows[0]?.[1],
+      abcde_metrics: abcde,
+      verbal_findings: verbalExp.findings || [],
+      reported_symptoms: positives,
+      patient_details: patient,
+    };
+
+    const replyData = await sendCopilotMessage(newMessages, contextPayload);
+    setChatMessages((prev) => [...prev, { role: 'assistant', content: replyData.reply }]);
+    setChatLoading(false);
+  };
+
+  if (input_check?.level === 'reject') {
+    return (
+      <main className="result-page">
+        <Link to="/" className="back-link">
+          <ArrowLeft size={16} /> Back to image explorer
+        </Link>
+        <section className="result-rejected">
+          <span className="step-number">!</span>
+          <h1>This image could not be analyzed</h1>
+          <p>{input_check.reasons?.[0] || 'Choose a supported skin photo and try again.'}</p>
+          <Link className="button-primary" to="/">
+            Choose another image
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  const categoryExemplars = exemplars[topClass] || [];
 
   return (
-    <>
-      <div className="results-page no-print" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {input_check?.level === 'reject' ? (
-          <div className="card tier-urgent">
-            <h3>{t.analysisRejected}</h3>
-            <ul>
-              {input_check.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
-            </ul>
-          </div>
-        ) : (
-          <>
-            <div className="tabs" style={{ marginBottom: '16px', flexShrink: 0 }}>
-              <div className={`tab ${mainTab === 'analysis' ? 'active' : ''}`} onClick={() => setMainTab('analysis')}>
-                Analysis
-              </div>
-              <div className={`tab ${mainTab === 'learn' ? 'active' : ''}`} onClick={() => setMainTab('learn')}>
-                {t.learnAbout}
-              </div>
-              <div className={`tab ${mainTab === 'appointment' ? 'active' : ''}`} onClick={() => setMainTab('appointment')}>
-                Appointment & Notes
-              </div>
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
-              {mainTab === 'analysis' && (
-                <div className="grid grid-cols-2" style={{ height: '100%' }}>
-                  {/* Left Column: Image Viewer */}
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '12px', margin: 0 }}>
-                      <div className="viewer" style={{ flex: 1, minHeight: 0, backgroundColor: 'var(--bg-subtle)', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-                        {imgUrl ? (
-                          <img src={imgUrl} alt="Original" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>Image Error</span>
-                        )}
-                        {gradcam && (
-                          <img 
-                            src={gradcam.heatmap} 
-                            alt="GradCAM Heatmap" 
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', opacity: opacity, mixBlendMode: 'multiply' }} 
-                          />
-                        )}
-                        {showOutline && outline && outline.polygon.length > 0 && (
-                          <svg viewBox="0 0 1 1" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                            <polygon 
-                              points={outline.polygon.map((p: number[]) => `${p[0]},${p[1]}`).join(' ')} 
-                              fill="none" 
-                              stroke="var(--accent)" 
-                              strokeWidth="0.01"
-                              strokeDasharray="0.02, 0.01"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      
-                      <div style={{ marginTop: '8px', display: 'flex', gap: '16px', alignItems: 'center', flexShrink: 0 }}>
-                        <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 0 }}>
-                          <span style={{ fontSize: '13px' }}>{t.highlight}</span>
-                          <input type="range" min="0" max="1" step="0.1" value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} style={{ flex: 1, margin: 0 }} />
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 0 }}>
-                          <input type="checkbox" checked={showOutline} onChange={(e) => setShowOutline(e.target.checked)} style={{ margin: 0 }} />
-                          <span style={{ fontSize: '13px' }}>{t.outline}</span>
-                        </label>
-                      </div>
-                      
-                      <div style={{ flexShrink: 0, marginTop: '8px' }}>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 0 }}>
-                          {t.highlightDesc}
-                        </p>
-                        {showOutline && (
-                          <p style={{ fontSize: '11px', color: 'var(--accent)', marginBottom: 0 }}>{outline?.method}</p>
-                        )}
-                        {gradcam?.focus_warning && (
-                          <p style={{ fontSize: '11px', color: 'var(--warning-color)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 0 }}>
-                            <AlertTriangle size={14} /> {gradcam.focus_warning}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Results Data */}
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
-                    {input_check?.level === 'warning' && (
-                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, backgroundColor: 'var(--warning-bg)', borderLeft: '4px solid var(--warning-color)' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: 'var(--warning-color)', fontWeight: 600, marginBottom: '4px' }}>
-                          <AlertTriangle size={16} /> {t.imageWarning}
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: '24px', fontSize: '13px' }}>
-                          {input_check.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    {inconclusive ? (
-                      <div className="card" style={{ backgroundColor: 'var(--bg-subtle)', marginBottom: 0, padding: '16px', flexShrink: 0 }}>
-                        <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>{t.inconclusiveResult}</h3>
-                        <p style={{ marginBottom: 0, fontSize: '14px' }}>{t.inconclusiveDesc}</p>
-                      </div>
-                    ) : (
-                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0 }}>
-                        <p style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px' }}>
-                          {t.topMatchLabel}
-                        </p>
-                        <h3 style={{ fontSize: '18px', marginBottom: '4px', color: 'var(--text-main)' }}>
-                          {t[topConditionKey as keyof typeof t] || content?.[topConditionKey]?.name || topConditionKey}
-                        </h3>
-                        <p style={{ fontSize: '13px', marginBottom: 0 }}>
-                          {t.uncertaintyLevel}: <strong>{uncertainty?.level.toUpperCase()}</strong>
-                        </p>
-                      </div>
-                    )}
-
-                    <div className={`card tier-${risk?.tier === 'urgent_review' ? 'urgent' : risk?.tier === 'see_doctor_soon' ? 'soon' : 'routine'}`} style={{ marginBottom: 0, padding: '12px', flexShrink: 0 }}>
-                      <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '14px' }}>
-                        <Info size={16} /> 
-                        {risk?.tier === 'urgent_review' ? t.urgentReviewAd : risk?.tier === 'see_doctor_soon' ? t.seeDoctorSoon : t.routineMonitoring}
-                      </h4>
-                      <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px' }}>
-                        {risk?.reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
-                        {risk?.reasons.length === 0 && <li>The model score and symptoms do not suggest immediate urgency, but this does not rule out cancer.</li>}
-                      </ul>
-                    </div>
-
-
-                    {result.language_reports && (
-                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, overflowY: 'auto', maxHeight: '300px' }}>
-                        <h4 style={{ marginBottom: '6px', fontSize: '14px' }}>{lang === 'hi' ? 'आसान भाषा में रिपोर्ट' : 'Patient-friendly explanation'}</h4>
-                        {lang === 'hi' ? (
-                          <>
-                            <p style={{ fontSize: '13px', fontWeight: 600 }}>{t[topConditionKey as keyof typeof t] || topConditionKey} — मॉडल का सबसे ऊँचा मिलान</p>
-                            <p style={{ fontSize: '12px' }}>यह फोटो-आधारित मॉडल का अनुमान है, पक्का निदान नहीं। मॉडल ने त्वचा की लालिमा, किनारों या रंग जैसे चिकित्सकीय लक्षणों को अलग से सत्यापित नहीं किया है।</p>
-                            <p style={{ fontSize: '12px' }}>यदि दाग बढ़ रहा है, बदल रहा है, खून निकलता है, दर्द होता है या आपको चिंता है, तो डॉक्टर/त्वचा रोग विशेषज्ञ से जाँच कराएँ।</p>
-                            <details>
-                              <summary style={{ cursor: 'pointer', fontSize: '12px' }}>AI द्वारा लिखी विस्तृत रिपोर्ट (English)</summary>
-                              <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.headline}</p>
-                              <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.summary}</p>
-                              <ul style={{ paddingLeft: '18px', fontSize: '12px' }}>{result.language_reports.patient_report_en?.next_steps?.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
-                            </details>
-                          </>
-                        ) : (
-                          <>
-                            <p style={{ fontSize: '13px', fontWeight: 600 }}>{result.language_reports.patient_report_en?.headline}</p>
-                            <p style={{ fontSize: '12px' }}>{result.language_reports.patient_report_en?.summary}</p>
-                            <ul style={{ paddingLeft: '18px', fontSize: '12px' }}>{result.language_reports.patient_report_en?.next_steps?.map((step: string, i: number) => <li key={i}>{step}</li>)}</ul>
-                          </>
-                        )}
-                        <details style={{ marginTop: '8px' }}>
-                          <summary style={{ cursor: 'pointer', fontSize: '12px' }}>{lang === 'hi' ? 'चिकित्सक / तकनीकी सारांश' : 'Clinician & technical summary'}</summary>
-                          <p style={{ fontSize: '12px', marginTop: '6px' }}>{result.language_reports.clinical_report_en}</p>
-                        </details>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: 0 }}>{result.language_reports.available ? 'Groq-generated wording' : 'Built-in fallback report; configure GROQ_API_KEY to enable Groq.'}</p>
-                      </div>
-                    )}
-
-                    {result.explanation_report && (
-                      <div className="card" style={{ marginBottom: 0, padding: '12px', flexShrink: 0, overflowY: 'auto', maxHeight: '310px' }}>
-                        <h4 style={{ marginBottom: '6px', fontSize: '14px' }}>Why the model predicted this</h4>
-                        <p style={{ fontSize: '12px', marginBottom: '8px' }}>{result.explanation_report.headline}</p>
-                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', lineHeight: 1.5 }}>
-                          {result.explanation_report.narrative.map((line: string, i: number) => <li key={i} style={{ marginBottom: '5px' }}>{line}</li>)}
-                        </ul>
-                        {result.explanation_report.metrics?.occlusion?.available && (
-                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '12px' }}>
-                            <strong>Patch occlusion metrics</strong>
-                            <div>Largest score drop: {(result.explanation_report.metrics.occlusion.max_probability_drop * 100).toFixed(1)} percentage points</div>
-                            <div>Mean positive drop: {(result.explanation_report.metrics.occlusion.mean_positive_drop * 100).toFixed(2)} percentage points</div>
-                            <div>Tested patches affecting score: {(result.explanation_report.metrics.occlusion.positive_patch_fraction * 100).toFixed(1)}%</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="card" style={{ marginBottom: 0, padding: '12px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                      <h4 style={{ marginBottom: '8px', fontSize: '14px' }}>Top Matches</h4>
-                      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        {top3?.map((t: any) => (
-                          <div key={t.class} style={{ marginBottom: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                              <span>{t[t.class as keyof typeof t] || content?.[t.class]?.name || t.class}</span>
-                              <span>{(t.prob * 100).toFixed(1)}%</span>
-                            </div>
-                            <div className="progress-bar" style={{ margin: '2px 0 4px 0', height: '6px' }}>
-                              <div className="progress-fill" style={{ width: `${t.prob * 100}%` }}></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <h4 style={{ marginTop: '8px', marginBottom: '8px', fontSize: '14px' }}>{t.riskGroups}</h4>
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', textAlign: 'center', flexShrink: 0 }}>
-                        <div style={{ flex: 1, padding: '6px', backgroundColor: 'var(--tier-urgent-bg)', borderRadius: '6px', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <strong>{t.malignant}</strong>
-                          <span>{(risk?.group_probs?.malignant * 100).toFixed(1)}%</span>
-                        </div>
-                        <div style={{ flex: 1, padding: '6px', backgroundColor: 'var(--tier-soon-bg)', borderRadius: '6px', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <strong>{t.precancerous}</strong>
-                          <span>{(risk?.group_probs?.precancerous * 100).toFixed(1)}%</span>
-                        </div>
-                        <div style={{ flex: 1, padding: '6px', backgroundColor: 'var(--tier-routine-bg)', borderRadius: '6px', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <strong>{t.benign}</strong>
-                          <span>{(risk?.group_probs?.benign * 100).toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {mainTab === 'learn' && result.language_reports?.condition_guidance_en && (
-                <div className="card" style={{ marginBottom: '16px', padding: '16px', flexShrink: 0 }}>
-                  <h3>{lang === 'hi' ? 'AI द्वारा तैयार जानकारी (अंग्रेज़ी सामग्री)' : 'AI-generated condition information'}</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{lang === 'hi' ? 'Groq रिपोर्ट अंग्रेज़ी में है। यह अनुमानित श्रेणी पर आधारित सामान्य जानकारी है, निदान नहीं।' : 'Generated from the predicted class and the details you provided. Educational guidance only, not a diagnosis.'}</p>
-                  {[
-                    ['overview', lang === 'hi' ? 'सारांश' : 'Overview'],
-                    ['causes_risks', lang === 'hi' ? 'कारण और जोखिम कारक' : 'Causes & risk factors'],
-                    ['symptoms_signs', lang === 'hi' ? 'लक्षण और संकेत' : 'Symptoms & signs'],
-                    ['doctor_assessment', lang === 'hi' ? 'डॉक्टर क्या जाँच सकते हैं' : 'What a doctor may check'],
-                    ['what_to_expect', lang === 'hi' ? 'जाँच में क्या अपेक्षा करें' : 'What to expect'],
-                    ['treatment', lang === 'hi' ? 'देखभाल और संभावित उपचार' : 'Care and treatment options'],
-                    ['what_can_you_do', lang === 'hi' ? 'आपकी दी गई जानकारी' : 'Personalized context'],
-                    ['urgent_care', lang === 'hi' ? 'कब चिकित्सा सहायता लें' : 'When to seek medical help']
-                  ].map(([key, label]) => (
-                    <section key={key} style={{ marginTop: '12px' }}>
-                      <h4 style={{ fontSize: '14px', marginBottom: '4px' }}>{label}</h4>
-                      <p style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>{result.language_reports.condition_guidance_en[key]}</p>
-                    </section>
-                  ))}
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 0 }}>Report source: {result.language_reports.available ? 'Groq API' : 'Built-in reference fallback'}{result.language_reports.error ? ` — ${result.language_reports.error}` : ''}</p>
-                </div>
-              )}
-
-              {mainTab === 'learn' && (
-                <div className="card" style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', margin: 0, padding: '16px', overflowY: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, marginBottom: '12px' }}>
-                    <h3 style={{ margin: 0 }}>{t.learnAbout} </h3>
-                    <select value={selectedCondition} onChange={(e) => setSelectedCondition(e.target.value)} style={{ width: 'auto', margin: 0, padding: '4px 8px' }}>
-                      {Object.keys(content || {}).filter(k => k !== '__meta__').map(k => (
-                        <option key={k} value={k}>{t[k as keyof typeof t] || content[k].name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="tabs" style={{ marginBottom: '16px', flexShrink: 0 }}>
-                    <div className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>{t.overview}</div>
-                    <div className={`tab ${activeTab === 'causes' ? 'active' : ''}`} onClick={() => setActiveTab('causes')}>{t.causesRisks}</div>
-                    <div className={`tab ${activeTab === 'symptoms' ? 'active' : ''}`} onClick={() => setActiveTab('symptoms')}>{t.symptomsSigns}</div>
-                    <div className={`tab ${activeTab === 'doctor' ? 'active' : ''}`} onClick={() => setActiveTab('doctor')}>{t.doctorVisit}</div>
-                    <div className={`tab ${activeTab === 'action' ? 'active' : ''}`} onClick={() => setActiveTab('action')}>{t.whatYouCanDo}</div>
-                  </div>
-                  
-                  <div style={{ fontSize: '14px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                      {activeTab === 'overview' && (
-                        <>
-                          <p><strong>{t.overview}:</strong> {conditionData.overview}</p>
-                          <p><strong>{t.whatItIs}</strong> {conditionData.what_it_is}</p>
-                        </>
-                      )}
-                      {activeTab === 'causes' && <p>{conditionData.causes_risks}</p>}
-                      {activeTab === 'symptoms' && <p>{conditionData.symptoms_signs}</p>}
-                      {activeTab === 'doctor' && (
-                        <>
-                          <p><strong>{t.assessment}</strong> {conditionData.doctor_assessment}</p>
-                          <p><strong>{t.whatToExpect}</strong> {conditionData.what_to_expect}</p>
-                          <p><strong>{t.treatment}</strong> {conditionData.treatment}</p>
-                        </>
-                      )}
-                      {activeTab === 'action' && (
-                        <>
-                          <p>{conditionData.what_can_you_do}</p>
-                          <p style={{ color: 'var(--tier-urgent)' }}><strong>{t.urgentCare}</strong> {conditionData.urgent_care}</p>
-                        </>
-                      )}
-                    </div>
-                    
-                    <div style={{ marginTop: '12px', fontSize: '11px', flexShrink: 0, borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                      <strong>{t.sources}</strong>
-                      <ul style={{ paddingLeft: '16px', marginBottom: 0 }}>
-                        {conditionData.links?.map((l: string, i: number) => (
-                          <li key={i}><a href={l} target="_blank" rel="noreferrer">{l}</a></li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {mainTab === 'appointment' && (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, backgroundColor: 'var(--bg-lighter)', padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
-                      <h3 style={{ margin: 0 }}>{t.prepAppointment}</h3>
-                      <button className="secondary" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, padding: '6px 12px' }}>
-                        <Printer size={16} /> {t.printSave}
-                      </button>
-                    </div>
-                    
-                    <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: '1fr 1fr', flex: 1 }}>
-                      <div>
-                        <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>{t.checklistBring}</p>
-                        <ul style={{ paddingLeft: '20px', fontSize: '13px', lineHeight: 1.6, marginBottom: 0 }}>
-                          <li>{t.checklist1}</li>
-                          <li>{t.checklist2}</li>
-                          <li>{t.checklist3}</li>
-                          <li>{t.checklist4}</li>
-                          <li>{t.checklist5}</li>
-                          <li>{t.checklist6}</li>
-                          <li>{t.checklist7}</li>
-                        </ul>
-                      </div>
-                      
-                      <div style={{ backgroundColor: 'var(--Surface)', padding: '12px', borderRadius: '4px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-                        <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{t.yourNotes}</p>
-                        <div style={{ flex: 1 }}>
-                          {guidance?.map((g: string, i: number) => <p key={i} style={{ fontSize: '13px', margin: '2px 0' }}>• {g}</p>)}
-                          <p style={{ fontSize: '13px', margin: '2px 0' }}>
-                            • {t.age}: {symptoms?.age || t.notProvided}, {t.sex}: {symptoms?.sex ? t[symptoms.sex as keyof typeof t] || symptoms.sex : t.notProvided}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ textAlign: 'center', padding: '12px', flexShrink: 0, backgroundColor: 'var(--error-bg)', borderRadius: '8px', color: 'var(--error-color)' }}>
-                    <h4 style={{ marginBottom: '4px', fontSize: '15px' }}>{t.importantMedicalNotice}</h4>
-                    <p style={{ fontSize: '13px', margin: 0, whiteSpace: 'pre-wrap' }}>
-                      {t.importantMedicalNoticeDesc}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+    <main className="result-page">
+      {/* Top action bar */}
+      <div className="result-topline">
+        <Link to="/" className="back-link">
+          <ArrowLeft size={18} /> {t.newImage || 'Analyze another image'}
+        </Link>
+        <div className="result-actions">
+          <Link to="/library" className="button-secondary">
+            <BookOpen size={16} /> View Image Library
+          </Link>
+          <button type="button" className="button-primary" onClick={() => window.print()}>
+            <Printer size={16} /> Save / Print Clinical Brief
+          </button>
+        </div>
       </div>
 
-      {/* 
-        PRINT ONLY LAYOUT
-        This section is hidden on screen and only displayed when the user triggers a print. Let's make it a beautiful clinic-ready PDF report!
-      */}
-      {input_check?.level !== 'reject' && (
-        <div className="print-only" style={{ color: 'black', padding: '20px' }}>
-          
-          <div style={{ textAlign: 'center', marginBottom: '24px', borderBottom: '2px solid black', paddingBottom: '12px' }}>
-            <h1 style={{ margin: 0, fontSize: '24pt' }}>Lesion Lens Clinical Report</h1>
-            <p style={{ margin: '4px 0', fontSize: '12pt', color: '#555' }}>
-              <strong>Disclaimer:</strong> This report is generated by an AI research prototype and is <strong>NOT</strong> a medical diagnosis.
-            </p>
+      <header className="result-heading">
+        <span className="eyebrow">
+          <ScanEye size={15} /> Clinical Morphological Diagnostic Workspace
+        </span>
+        <h1>{scoreLabel(topClass)}</h1>
+        <p>
+          Comprehensive computer-vision assessment combining deep feature attribution, ABCDE
+          morphology, and interactive clinical guidance.
+        </p>
+      </header>
+
+      {historyError && (
+        <div className="quality-message" role="status">
+          <Info size={16} />
+          <span>{historyError}</span>
+        </div>
+      )}
+
+      {input_check?.level === 'warning' && (
+        <div className="quality-message">
+          <Info size={16} />
+          <span>{input_check.reasons?.join(' ')}</span>
+        </div>
+      )}
+
+      {/* 1. VERBAL EXPLAINABILITY BANNER */}
+      {verbalExp?.findings && verbalExp.findings.length > 0 && (
+        <section className="verbal-banner">
+          <div className="verbal-banner-top">
+            <Activity size={20} color="var(--accent)" />
+            <h2>{verbalExp.headline || 'Morphological Feature Breakdown'}</h2>
+          </div>
+          <p style={{ margin: '4px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            {verbalExp.summary}
+          </p>
+          <ul className="verbal-findings-list">
+            {verbalExp.findings.map((item: string, idx: number) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* 2. MAIN GRID: MULTI-MODE VISUALIZER & SCORES */}
+      <section className="result-main-grid">
+        {/* Left Card: High-Res Visualizer */}
+        <div className="result-image-card">
+          <div className="result-section-title" style={{ marginBottom: '14px' }}>
+            <div>
+              <span className="eyebrow">
+                <Layers size={14} /> Diagnostic Attribution
+              </span>
+              <h2>Visualizer & Lesion Segmentation</h2>
+            </div>
           </div>
 
-          {/* Patient Info & Stats block */}
-          <div className="avoid-break" style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
-            <div style={{ flex: 1, border: '1px solid #ddd', padding: '16px', borderRadius: '8px' }}>
-              <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>Patient Information</h3>
-              <p style={{ margin: '4px 0', fontSize: '11pt' }}><strong>{t.age}:</strong> <span>{symptoms?.age || t.notProvided}</span></p>
-              <p style={{ margin: '4px 0', fontSize: '11pt' }}><strong>{t.sex}:</strong> <span>{symptoms?.sex ? t[symptoms.sex as keyof typeof t] || symptoms.sex : t.notProvided}</span></p>
-              <div style={{ marginTop: '12px', fontSize: '11pt' }}>
-                <strong>{t.yourNotes}:</strong>
-                {guidance?.map((g: string, i: number) => <div key={i} style={{ margin: '4px 0' }}>• {g}</div>)}
-                {(!guidance || guidance.length === 0) && <div style={{ color: '#666', marginTop: '4px' }}>None provided.</div>}
-              </div>
-            </div>
-            
-            <div style={{ flex: 1, border: '1px solid #ddd', padding: '16px', borderRadius: '8px', backgroundColor: risk?.tier === 'urgent_review' ? '#FEF2F2' : risk?.tier === 'see_doctor_soon' ? '#FFFBEB' : '#ECFDF5' }}>
-              <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>Analysis Summary</h3>
-              <p style={{ margin: '4px 0', fontSize: '11pt' }}><strong>Top Match:</strong> {t[topConditionKey as keyof typeof t] || content?.[topConditionKey]?.name || topConditionKey}</p>
-              <p style={{ margin: '4px 0', fontSize: '11pt' }}><strong>Uncertainty Level:</strong> {uncertainty?.level.toUpperCase()}</p>
-              <p style={{ margin: '4px 0', fontSize: '11pt' }}>
-                <strong>Action Recommended:</strong> {risk?.tier === 'urgent_review' ? t.urgentReviewAd : risk?.tier === 'see_doctor_soon' ? t.seeDoctorSoon : t.routineMonitoring}
-              </p>
-              
-              <div style={{ marginTop: '12px' }}>
-                <strong>Top Predictions:</strong>
-                {top3?.map((t_item: any, i: number) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0', fontSize: '11pt' }}>
-                    <span>{t[t_item.class as keyof typeof t] || content?.[t_item.class]?.name || t_item.class}</span>
-                    <span>{(t_item.prob * 100).toFixed(1)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <div className={`result-image-stage ${vizMode === 'occlusion' ? 'occlusion-view' : ''}`}>
+            {vizMode === 'contour' && contourB64 ? (
+              <img className="result-original" src={contourB64} alt="Segmented lesion boundary contour" />
+            ) : vizMode === 'overlay' && gradcam?.overlay ? (
+              <img className="result-original" src={gradcam.overlay} alt="Grad-CAM activation overlay" />
+            ) : vizMode === 'heatmap' && gradcam?.heatmap ? (
+              <img className="result-original" src={gradcam.heatmap} alt="Grad-CAM heatmap" />
+            ) : (
+              imageUrl && <img className="result-original" src={imageUrl} alt="Uploaded skin image" />
+            )}
 
-          {/* Imaging block */}
-          <div className="avoid-break" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>Visual Analysis & Focus</h3>
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'space-between' }}>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>Original Image</p>
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1', backgroundColor: '#f9f9f9', border: '1px solid #ddd', overflow: 'hidden' }}>
-                  {imgUrl && <img src={imgUrl} alt="Original" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>Grad-CAM (50% opacity)</p>
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1', backgroundColor: '#f9f9f9', border: '1px solid #ddd', overflow: 'hidden' }}>
-                  {imgUrl && <img src={imgUrl} alt="Original" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                  {gradcam && <img src={gradcam.heatmap} alt="Heatmap 1" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'multiply', opacity: 0.5, objectFit: 'contain' }} />}
-                  {outline && outline.polygon.length > 0 && (
-                    <svg viewBox="0 0 1 1" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                      <polygon points={outline.polygon.map((p: number[]) => `${p[0]},${p[1]}`).join(' ')} fill="none" stroke="#2563EB" strokeWidth="0.012" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>Grad-CAM (100% overlay)</p>
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1', backgroundColor: '#f9f9f9', border: '1px solid #ddd', overflow: 'hidden' }}>
-                  {imgUrl && <img src={imgUrl} alt="Original" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                  {gradcam && <img src={gradcam.heatmap} alt="Heatmap 2" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', mixBlendMode: 'multiply', opacity: 1.0, objectFit: 'contain' }} />}
-                </div>
-              </div>
-            </div>
-            {gradcam?.focus_warning && (
-              <p style={{ marginTop: '12px', color: '#B45309', fontWeight: 'bold', fontSize: '11pt' }}>
-                Warning: {gradcam.focus_warning}
-              </p>
+            {vizMode === 'occlusion' && explanation?.metrics?.occlusion?.patch_grid && (
+              <span
+                className="occlusion-patch"
+                style={{
+                  left: `${explanation.metrics.occlusion.patch_grid.x_start * 100}%`,
+                  top: `${explanation.metrics.occlusion.patch_grid.y_start * 100}%`,
+                  width: `${(explanation.metrics.occlusion.patch_grid.x_end - explanation.metrics.occlusion.patch_grid.x_start) * 100}%`,
+                  height: `${(explanation.metrics.occlusion.patch_grid.y_end - explanation.metrics.occlusion.patch_grid.y_start) * 100}%`,
+                }}
+              />
             )}
           </div>
 
+          {/* Visualization mode toggle buttons */}
+          <div className="image-controls-bar">
+            <div className="explanation-view-tabs" role="group" aria-label="Visualizer Modes">
+              <button
+                type="button"
+                className={vizMode === 'original' ? 'active' : ''}
+                onClick={() => setVizMode('original')}
+              >
+                Original
+              </button>
+              {contourB64 && (
+                <button
+                  type="button"
+                  className={vizMode === 'contour' ? 'active' : ''}
+                  onClick={() => setVizMode('contour')}
+                >
+                  Lesion Border
+                </button>
+              )}
+              {gradcam?.overlay && (
+                <button
+                  type="button"
+                  className={vizMode === 'overlay' ? 'active' : ''}
+                  onClick={() => setVizMode('overlay')}
+                >
+                  Attribution Overlay
+                </button>
+              )}
+              {gradcam?.heatmap && (
+                <button
+                  type="button"
+                  className={vizMode === 'heatmap' ? 'active' : ''}
+                  onClick={() => setVizMode('heatmap')}
+                >
+                  Heatmap
+                </button>
+              )}
+              {explanation?.metrics?.occlusion?.patch_grid && (
+                <button
+                  type="button"
+                  className={vizMode === 'occlusion' ? 'active' : ''}
+                  onClick={() => setVizMode('occlusion')}
+                >
+                  Perturbation Patch
+                </button>
+              )}
+            </div>
+          </div>
+          <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            Green outline highlights the computer-vision segmented lesion boundary used for ABCDE calculations.
+          </p>
+        </div>
 
-          {result.explanation_report && (
-            <div className="avoid-break" style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>Explainability Report</h3>
-              <p style={{ fontSize: '11pt' }}><strong>{result.explanation_report.headline}</strong></p>
-              <ul style={{ fontSize: '10pt', lineHeight: 1.5 }}>
-                {result.explanation_report.narrative.map((line: string, i: number) => <li key={i} style={{ marginBottom: '5px' }}>{line}</li>)}
-              </ul>
-              {result.explanation_report.metrics?.occlusion?.available && <p style={{ fontSize: '10pt' }}>Occlusion test: largest score drop {(result.explanation_report.metrics.occlusion.max_probability_drop * 100).toFixed(1)} percentage points across {result.explanation_report.metrics.occlusion.patch_count} tested patches.</p>}
+        {/* Right Card: Category Ranking & Probabilities */}
+        <div className="result-score-card">
+          <div className="result-section-title">
+            <div>
+              <span className="eyebrow">Statistical Differential</span>
+              <h2>Differential Diagnosis Ranking</h2>
+            </div>
+            {typeof uncertainty?.view_agreement === 'number' && (
+              <span className="abcde-badge">
+                {Math.round(uncertainty.view_agreement * 100)}% view consensus
+              </span>
+            )}
+          </div>
+
+          {/* View selector tabs */}
+          {view_scores.length > 0 && (
+            <div style={{ display: 'flex', gap: '6px', margin: '10px 0 14px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveView('average')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: activeView === 'average' ? 'var(--accent)' : 'var(--bg-subtle)',
+                  color: activeView === 'average' ? '#fff' : 'var(--text-secondary)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                Average (4-view)
+              </button>
+              {view_scores.map((v: any) => (
+                <button
+                  type="button"
+                  key={v.view}
+                  onClick={() => setActiveView(v.view)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: activeView === v.view ? 'var(--accent)' : 'var(--bg-subtle)',
+                    color: activeView === v.view ? '#fff' : 'var(--text-secondary)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {v.view.replace('_', ' ')}
+                </button>
+              ))}
             </div>
           )}
 
-          <div className="avoid-break">
-            <h3 style={{ fontSize: '14pt', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>
-              Condition Details: {t[topConditionKey as keyof typeof t] || conditionData.name || topConditionKey}
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '11pt', lineHeight: 1.5 }}>
-              <p><strong>{t.overview}:</strong> {conditionData.overview}</p>
-              <p><strong>{t.whatItIs}:</strong> {conditionData.what_it_is}</p>
-              <p><strong>{t.causesRisks}:</strong> {conditionData.causes_risks}</p>
-              <p><strong>{t.symptomsSigns}:</strong> {conditionData.symptoms_signs}</p>
-              <p><strong>Doctor's {t.assessment}:</strong> {conditionData.doctor_assessment}</p>
-              <p><strong>{t.whatToExpect}:</strong> {conditionData.what_to_expect}</p>
-              <p><strong>{t.treatment}:</strong> {conditionData.treatment}</p>
-              <p><strong>{t.urgentCare}:</strong> <span style={{ color: '#D92D20', fontWeight: 'bold' }}>{conditionData.urgent_care}</span></p>
+          {scoreRows.length > 0 && (
+            <div className="lead-score-box">
+              <span>{scoreLabel(scoreRows[0][0])}</span>
+              <strong>{(Number(scoreRows[0][1]) * 100).toFixed(1)}%</strong>
+            </div>
+          )}
+
+          <div style={{ marginTop: '16px' }}>
+            {scoreRows.map(([key, value]: any, index: number) => (
+              <div className="score-row-item" key={key}>
+                <div className="score-row-header">
+                  <span>{scoreLabel(key)}</span>
+                  <strong>{(value * 100).toFixed(1)}%</strong>
+                </div>
+                <div className="score-track-bar">
+                  <div
+                    className="score-fill"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, value * 100))}%`,
+                      background: index === 0 ? 'var(--accent)' : 'var(--text-muted)',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="scope-note" style={{ marginTop: '18px' }}>
+            <Info size={16} />
+            <div>
+              <strong>Calibrated Research Probabilities</strong>
+              <span>
+                Scores represent model ranking across 7 classes under temperature scaling. They do not replace a histologic biopsy.
+              </span>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* 3. QUANTITATIVE ABCDE DERMOSCOPY FEATURE CARDS */}
+      {abcde && (
+        <section className="result-score-card" style={{ marginBottom: '24px' }}>
+          <div className="result-section-title">
+            <div>
+              <span className="eyebrow">Dermatological Morphology</span>
+              <h2>Computer Vision ABCDE Analysis</h2>
+            </div>
+          </div>
+
+          <div className="abcde-grid">
+            {/* A: Asymmetry */}
+            <div className="abcde-card">
+              <div className="abcde-card-header">
+                <span className="eyebrow">A — Asymmetry</span>
+                <span className="abcde-badge">{abcde.asymmetry_level || 'Evaluated'}</span>
+              </div>
+              <strong>Asymmetry Index: {abcde.asymmetry_index ?? 'N/A'} / 1.0</strong>
+              <p>
+                Calculated by flipping lesion contour along orthogonal major and minor axes to evaluate geometric symmetry.
+              </p>
+            </div>
+
+            {/* B: Border */}
+            <div className="abcde-card">
+              <div className="abcde-card-header">
+                <span className="eyebrow">B — Border</span>
+                <span className="abcde-badge">{abcde.border_level || 'Evaluated'}</span>
+              </div>
+              <strong>Border Roughness: {abcde.border_roughness ?? 'N/A'}</strong>
+              <p>
+                Isoperimetric compactness quotient (P² / 4πA). High values indicate notched, jagged, or scalloped edges.
+              </p>
+            </div>
+
+            {/* C: Color */}
+            <div className="abcde-card">
+              <div className="abcde-card-header">
+                <span className="eyebrow">C — Color Variegation</span>
+                <span className="abcde-badge">{abcde.color_count ?? 1} Chromatic Zones</span>
+              </div>
+              <strong>Diversity Score: {abcde.color_variegation_score ?? 'N/A'}</strong>
+              <div className="color-swatch-list">
+                {(abcde.identified_colors || []).map((col: string) => (
+                  <span className="color-swatch-pill" key={col}>
+                    {col.replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* D: Diameter */}
+            <div className="abcde-card">
+              <div className="abcde-card-header">
+                <span className="eyebrow">D — Diameter & Footprint</span>
+                <span className="abcde-badge">Field Coverage</span>
+              </div>
+              <strong>{((abcde.frame_coverage_ratio || 0) * 100).toFixed(1)}% of frame</strong>
+              <p>
+                Equivalent pixel diameter: {abcde.equivalent_diameter_px} px. Lesions larger than 6 mm (pencil eraser) warrant close clinical monitoring.
+              </p>
+            </div>
+          </div>
+        </section>
       )}
-    </>
+
+      {/* 4. VISUAL COMPARISON: 5 VERIFIED EXEMPLARS OF THE DIAGNOSED CATEGORY */}
+      {categoryExemplars.length > 0 && (
+        <section
+          className="result-score-card"
+          style={{
+            marginBottom: '24px',
+            border: '1.5px solid var(--accent-border)',
+            background: 'var(--Surface)',
+          }}
+        >
+          <div className="result-section-title" style={{ marginBottom: '14px' }}>
+            <div>
+              <span className="eyebrow">
+                <ShieldCheck size={14} /> Confirmed ISIC Reference Cases
+              </span>
+              <h2>Visual Comparison: 5 Verified Cases of {labelMap[topClass]}</h2>
+            </div>
+            <Link to="/library" className="button-secondary" style={{ fontSize: '12px', padding: '6px 12px' }}>
+              Explore Full 35-Image Atlas <ExternalLink size={13} />
+            </Link>
+          </div>
+
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+            Compare your lesion against 5 biopsy-confirmed dermoscopic exemplars of {labelMap[topClass]} from the HAM10000 archive. Click any thumbnail to view case metadata.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+            {categoryExemplars.map((ex) => (
+              <div
+                key={ex.isic_id}
+                onClick={() => setActiveModalExemplar(ex)}
+                style={{
+                  position: 'relative',
+                  aspectRatio: '1',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  border: '1px solid var(--border)',
+                  boxShadow: 'var(--shadow-sm)',
+                  background: 'var(--bg-subtle)',
+                  transition: 'transform 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title={`Inspect ${ex.isic_id}`}
+              >
+                <img
+                  src={ex.local_url}
+                  alt={ex.isic_id}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = ex.remote_thumb;
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    insetInline: 0,
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                    padding: '4px 6px',
+                    color: 'white',
+                    fontSize: '10px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span>{ex.isic_id.replace('ISIC_', '#')}</span>
+                  <Eye size={11} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 5. INTERACTIVE CLINICAL COPILOT CHAT (Powered by Groq LLM) */}
+      <section className="copilot-section">
+        <div className="copilot-header">
+          <Sparkles size={22} color="var(--accent)" />
+          <div>
+            <h2>Clinical AI Copilot (Interactive Q&A)</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+              Ask anything about your lesion findings, what the scores mean, or how to speak with your doctor.
+            </p>
+          </div>
+        </div>
+
+        {/* Chat message stream */}
+        <div className="copilot-chat-box">
+          {chatMessages.map((msg, index) => (
+            <div key={index} className={`chat-bubble ${msg.role}`}>
+              {msg.content}
+            </div>
+          ))}
+          {chatLoading && (
+            <div className="chat-bubble assistant" style={{ fontStyle: 'italic', opacity: 0.8 }}>
+              Analyzing morphological findings and clinical guidelines...
+            </div>
+          )}
+        </div>
+
+        {/* Quick prompt suggestions */}
+        <div className="suggested-prompts">
+          <button
+            type="button"
+            className="suggested-prompt-btn"
+            onClick={() => handleSendChat("What do my Asymmetry and Border scores indicate?")}
+          >
+            "What do my Asymmetry and Border scores indicate?"
+          </button>
+          <button
+            type="button"
+            className="suggested-prompt-btn"
+            onClick={() => handleSendChat("What specific questions should I ask my dermatologist?")}
+          >
+            "What questions should I ask my dermatologist?"
+          </button>
+          <button
+            type="button"
+            className="suggested-prompt-btn"
+            onClick={() => handleSendChat("How does dermoscopy differ from an automated image scan?")}
+          >
+            "How does dermoscopy differ from an automated scan?"
+          </button>
+        </div>
+
+        {/* Input box */}
+        <form
+          className="copilot-input-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendChat();
+          }}
+        >
+          <input
+            type="text"
+            value={inputQuestion}
+            onChange={(e) => setInputQuestion(e.target.value)}
+            placeholder="Type your question about this lesion or doctor visit..."
+            disabled={chatLoading}
+          />
+          <button type="submit" className="button-primary" disabled={chatLoading || !inputQuestion.trim()}>
+            <Send size={16} /> Send
+          </button>
+        </form>
+      </section>
+
+      {/* 6. DOCTOR REFERRAL & CLINICAL BRIEF (Print / PDF Ready) */}
+      <section className="doctor-brief-card">
+        <div className="doctor-brief-header">
+          <div>
+            <span className="eyebrow">
+              <FileText size={15} /> Clinical Consultation Memo
+            </span>
+            <h2>Pre-Appointment Doctor Brief</h2>
+          </div>
+          <button type="button" className="button-secondary" onClick={() => window.print()}>
+            <Printer size={15} /> Print / Save as PDF
+          </button>
+        </div>
+
+        <div className="doctor-brief-grid">
+          <div className="brief-metric-box">
+            <span>Patient / Body Site</span>
+            <strong>
+              {patient.name || 'Anonymous'} · {patient.gender || 'Not specified'} (
+              {modelContext.provided?.localization || 'Body site unrecorded'})
+            </strong>
+            {firstNoticed && (
+              <small style={{ display: 'block', marginTop: '4px', color: 'var(--text-muted)' }}>
+                First noticed: {firstNoticed}
+              </small>
+            )}
+          </div>
+          <div className="brief-metric-box">
+            <span>Primary Algorithmic Indication</span>
+            <strong>{labelMap[topClass] || topClass} ({(scoreRows[0]?.[1] * 100).toFixed(1)}%)</strong>
+          </div>
+          <div className="brief-metric-box">
+            <span>Reported Symptoms</span>
+            <strong>{positives.length > 0 ? positives.join(', ') : 'None reported'}</strong>
+          </div>
+        </div>
+
+        {/* Morphological Summary */}
+        {report?.patient_report_en?.questions_for_doctor && (
+          <div style={{ marginTop: '16px' }}>
+            <h4 style={{ fontSize: '14px', marginBottom: '8px' }}>Recommended Questions for Your Clinician:</h4>
+            <ul style={{ paddingLeft: '20px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+              {report.patient_report_en.questions_for_doctor.map((q: string, idx: number) => (
+                <li key={idx} style={{ marginBottom: '4px' }}>
+                  {q}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Visit Notes */}
+        <div style={{ marginTop: '18px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+            Your Personal Notes for the Doctor:
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add specific details (e.g. date first noticed, changes over time, family history)..."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '14px',
+              background: 'var(--bg-lighter)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              color: 'var(--text-main)',
+            }}
+          />
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Notes are saved automatically in your browser's local history and included in print/PDF output.
+          </span>
+        </div>
+      </section>
+
+      {/* Reference Educational Card */}
+      <section className="result-content-card">
+        <div className="result-card-heading">
+          <BookOpen size={20} color="var(--accent)" />
+          <div>
+            <h2>Clinical Reference: {condition.name || labelMap[topClass]}</h2>
+            <p>Peer-reviewed reference guidelines on condition pathology, risk factors, and staging.</p>
+          </div>
+        </div>
+        <p>{condition.overview || 'General condition reference details.'}</p>
+        {condition.causes_risks && (
+          <p>
+            <strong>Risk Factors & Etiology:</strong> {condition.causes_risks}
+          </p>
+        )}
+        {condition.doctor_assessment && (
+          <p>
+            <strong>Diagnostic Workup:</strong> {condition.doctor_assessment}
+          </p>
+        )}
+        {condition.links && condition.links.length > 0 && (
+          <div className="source-list">
+            <strong>Trusted Medical Sources:</strong>
+            {condition.links.map((url: string) => (
+              <a href={url} target="_blank" rel="noreferrer" key={url}>
+                {new URL(url).hostname.replace(/^www\./, '')} <ExternalLink size={12} />
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Lightbox Modal for Results Screen */}
+      {activeModalExemplar && (
+        <div
+          onClick={() => setActiveModalExemplar(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 100,
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--Surface)',
+              padding: '24px',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <span className="eyebrow" style={{ marginBottom: 0 }}>
+                  <ShieldCheck size={14} /> Confirmed Clinical Case
+                </span>
+                <h3 style={{ margin: '4px 0 0', fontSize: '18px' }}>{activeModalExemplar.isic_id}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModalExemplar(null)}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                borderRadius: '10px',
+                overflow: 'hidden',
+                background: '#000',
+                aspectRatio: '1',
+                display: 'grid',
+                placeItems: 'center',
+                marginBottom: '16px',
+              }}
+            >
+              <img
+                src={activeModalExemplar.local_url}
+                alt={activeModalExemplar.isic_id}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginBottom: '14px' }}>
+              <div className="brief-metric-box">
+                <span>Histopathologic Diagnosis</span>
+                <strong>{activeModalExemplar.diagnosis}</strong>
+              </div>
+              <div className="brief-metric-box">
+                <span>Confirmation Method</span>
+                <strong>{activeModalExemplar.diagnosis_confirm}</strong>
+              </div>
+              <div className="brief-metric-box">
+                <span>Patient Demographics</span>
+                <strong>
+                  {activeModalExemplar.age ? `${activeModalExemplar.age} yrs` : 'Unknown'} · {activeModalExemplar.sex || 'Unknown'}
+                </strong>
+              </div>
+              <div className="brief-metric-box">
+                <span>Anatomical Site</span>
+                <strong>{activeModalExemplar.site}</strong>
+              </div>
+            </div>
+
+            <a
+              href={`https://api.isic-archive.com/images/${activeModalExemplar.isic_id}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="button-primary"
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              View on ISIC Archive <ExternalLink size={15} />
+            </a>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

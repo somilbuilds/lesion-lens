@@ -1,94 +1,99 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import { ArrowUpRight, BookOpen, Database, Shield, Sparkles } from 'lucide-react';
 import { fetchModelInfo } from '../api';
 
+type ModelInfo = {
+  classes: string[];
+  metadata_supported?: boolean;
+  model_type?: string;
+  metrics?: { accuracy?: number; balanced_accuracy?: number; macro_auc?: number; macro_f1?: number; per_class_recall?: Record<string, number>; per_class?: Record<string, { precision?: number; recall?: number; 'f1-score'?: number; support?: number }> };
+  evaluation?: { status?: string; evaluation_date?: string; test_images?: number; test_class_support?: Record<string, number>; confusion_matrix?: number[][]; confusion_matrix_classes?: string[]; calibration?: string | object; model_version?: string; dataset?: string; dataset_doi?: string; split_group?: string; split_counts?: Record<string, number>; evaluation_manifest_sha256?: string };
+  versions?: { id: string; evaluation_manifest_sha256?: string; metrics: { accuracy?: number; balanced_accuracy?: number; macro_f1?: number; macro_ovr_auc?: number } }[];
+  evaluation_status?: string;
+  datasets?: string;
+  limitations?: string[];
+};
+
+const classNames: Record<string, string> = {
+  akiec: 'Actinic keratosis / in-situ carcinoma', bcc: 'Basal cell carcinoma', bkl: 'Benign keratosis-like lesion',
+  df: 'Dermatofibroma', mel: 'Melanoma', nv: 'Melanocytic nevus', vasc: 'Vascular lesion',
+};
+
+function percent(value?: number) { return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—'; }
+
 export default function About() {
-  const [info, setInfo] = useState<any>(null);
+  const [info, setInfo] = useState<ModelInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  
   useEffect(() => {
-    fetchModelInfo().then(data => {
-      setInfo(data);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    fetchModelInfo().then(setInfo).catch(() => setInfo(null)).finally(() => setLoading(false));
   }, []);
+  const comparableVersions = (info?.versions || []).filter((version) => Boolean(info?.evaluation?.evaluation_manifest_sha256) && version.evaluation_manifest_sha256 === info?.evaluation?.evaluation_manifest_sha256);
 
   return (
-    <div className="about-page grid">
-      <div className="card">
-        <h2>About the Model</h2>
-        <p>This tool uses a machine learning model to analyze skin images. It is a research prototype and must not be used as a substitute for professional medical advice, diagnosis, or treatment.</p>
-        
-        {loading ? <p>Loading model information...</p> : (
-          <>
-            <h3>Training Data & Bias</h3>
-            <p>{info?.datasets}</p>
-            
-            <h3 style={{ marginTop: '24px' }}>Model Setup & Limitations</h3>
-            <ul style={{ paddingLeft: '20px', marginBottom: '24px' }}>
-              {info?.limitations?.map((l: string, i: number) => <li key={i} style={{ marginBottom: '8px' }}>{l}</li>)}
-            </ul>
-            
-            <h3>Measured Test Results (1,203 held-out images)</h3>
-            <div className="grid grid-cols-2" style={{ marginBottom: '24px' }}>
-              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '16px', borderRadius: '8px' }}>
-                <p style={{ margin: 0 }}><strong>Accuracy:</strong> {(info?.metrics?.accuracy * 100).toFixed(1)}%</p>
-                <p style={{ margin: 0 }}><strong>Balanced Accuracy:</strong> {(info?.metrics?.balanced_accuracy * 100).toFixed(1)}%</p>
-              </div>
-              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '16px', borderRadius: '8px' }}>
-                <p style={{ margin: 0 }}><strong>Macro AUC:</strong> {info?.metrics?.macro_auc}</p>
-                <p style={{ margin: 0 }}><strong>Macro F1:</strong> {info?.metrics?.macro_f1}</p>
-              </div>
-            </div>
-            
-            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', marginBottom: '24px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Class</th>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Recall</th>
-                </tr>
-              </thead>
-              <tbody>
-                {info?.metrics?.per_class_recall && Object.entries(info.metrics.per_class_recall).map(([cls, rec]: [string, any]) => (
-                  <tr key={cls} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '8px', textTransform: 'uppercase' }}>{cls}</td>
-                    <td style={{ padding: '8px' }}>{(rec * 100).toFixed(1)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            <h3 style={{ marginTop: '28px' }}>Research & Model Comparison</h3>
-            <p>Comparison figures from the research experiments. Replace the placeholders with plots generated from the same held-out evaluation split and label the dataset, class order, and sample count.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-              {[
-                { src: '/research/model-comparison.png', title: 'Model metrics comparison', placeholder: 'Add frontend/public/research/model-comparison.png' },
-                { src: '/research/confusion-matrices.png', title: 'Confusion matrices', placeholder: 'Add frontend/public/research/confusion-matrices.png' },
-                { src: '/research/class-metrics.png', title: 'Per-class metrics (optional)', placeholder: 'Add frontend/public/research/class-metrics.png' },
-              ].map((chart) => (
-                <section className="card" key={chart.src} style={{ margin: 0, padding: '12px', minWidth: 0 }}>
-                  <h4>{chart.title}</h4>
-                  <img src={chart.src} alt={chart.title} style={{ width: '100%', height: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none'; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = 'block'; }} />
-                  <p style={{ display: 'none', fontSize: '12px', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{chart.placeholder}</p>
-                </section>
-              ))}
-            </div>
-            <p style={{ fontSize: '12px' }}>Research note: the comparison charts are separate from the live classifier metrics shown above. Do not treat results from different datasets or splits as directly comparable.</p>
+    <main className="evidence-page">
+      <header className="evidence-hero">
+        <span className="eyebrow"><BookOpen size={14} /> MODEL & EVIDENCE</span>
+        <h1>Know what the model can tell you.</h1>
+        <p>SkinLesionNet is an image-classification research project. This page separates the recorded experiment from what has been verified about it.</p>
+      </header>
 
-            <h3>Melanoma / Nevus Weakness</h3>
-            <div style={{ backgroundColor: 'var(--warning-bg)', padding: '16px', borderRadius: '8px', color: 'var(--warning-color)' }}>
-              <p style={{ margin: 0, fontWeight: 500 }}>Precision for Melanoma: {(info?.metrics?.melanoma_precision * 100).toFixed(1)}%</p>
-              <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>{info?.metrics?.melanoma_notes}</p>
+      <section className="evidence-callout">
+        <div className="evidence-icon"><Database size={18} /></div>
+        <div><strong>{info?.evaluation?.status || 'Evaluation provenance is still being reconstructed'}</strong><p>{info?.evaluation_status || 'Metrics are not available from the local API right now.'} These results do not establish clinical performance.</p></div>
+      </section>
+
+      <section className="evidence-section">
+        <div className="section-title"><span>01</span><div><h2>Recorded evaluation</h2><p>Aggregate metrics currently stored with the repository.</p></div></div>
+        {loading ? <p>Loading model record…</p> : info?.metrics ? (
+          <>
+            <div className="metric-grid">
+              {[
+                ['Accuracy', info.metrics.accuracy], ['Balanced accuracy', info.metrics.balanced_accuracy],
+                ['Macro AUC', info.metrics.macro_auc], ['Macro F1', info.metrics.macro_f1],
+              ].map(([label, value]) => <div className="metric-card" key={String(label)}><span>{label}</span><strong>{percent(value as number | undefined)}</strong></div>)}
             </div>
+            <div className="evidence-meta-grid">
+              {[
+                ['Model version', info.evaluation?.model_version || 'Unidentified'],
+                ['Evaluation date', info.evaluation?.evaluation_date || 'Not recorded'],
+                ['Test images', info.evaluation?.test_images ?? 'Not recorded'],
+                ['Calibration', typeof info.evaluation?.calibration === 'string' ? info.evaluation.calibration : 'Not evaluated'],
+                ['Dataset', info.evaluation?.dataset || 'Unknown'],
+                ['Split grouping', info.evaluation?.split_group || 'Not recorded'],
+                ['Split sizes', info.evaluation?.split_counts ? Object.entries(info.evaluation.split_counts).map(([key, count]) => `${key}: ${count}`).join(' · ') : 'Not recorded'],
+                ['Evaluation manifest', info.evaluation?.evaluation_manifest_sha256 ? `${info.evaluation.evaluation_manifest_sha256.slice(0, 12)}…` : 'Not recorded'],
+              ].map(([label, value]) => <div className="evidence-meta-card" key={label}><span>{label}</span><strong>{String(value)}</strong></div>)}
+            </div>
+            <p className="evidence-caption">Per-class results from the selected evaluation export. Missing fields are shown as unavailable rather than estimated.</p>
+            <div className="recall-list">{Object.entries(info.metrics.per_class_recall || {}).map(([key, value]) => <div className="recall-row" key={key}><span>{classNames[key] || key}</span><div className="recall-track"><i style={{ width: `${Math.max(0, Math.min(100, value * 100))}%` }} /></div><strong>{percent(value)}</strong></div>)}</div>
+            {!!Object.keys(info.metrics.per_class || {}).length && <div className="table-scroll"><table className="evidence-class-table"><thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Test cases</th></tr></thead><tbody>{Object.entries(info.metrics.per_class || {}).filter(([key]) => key !== 'accuracy' && key !== 'macro avg' && key !== 'weighted avg').map(([key, values]) => <tr key={key}><td>{classNames[key] || key}</td><td>{percent(values.precision)}</td><td>{percent(values.recall)}</td><td>{percent(values['f1-score'])}</td><td>{values.support ?? '—'}</td></tr>)}</tbody></table></div>}
+            {info.evaluation?.confusion_matrix?.length ? <section className="confusion-section"><h3>Normalized confusion matrix</h3><p>Rows are true labels; columns are model-ranked labels. Color intensity represents the row share.</p><div className="table-scroll"><div className="confusion-matrix" style={{ gridTemplateColumns: `minmax(105px,1.2fr) repeat(${info.evaluation.confusion_matrix_classes?.length || 0}, minmax(38px,1fr))` }}>
+              <span className="confusion-label">True ↓ / Model →</span>{(info.evaluation.confusion_matrix_classes || []).map((key) => <span className="confusion-label" key={`head-${key}`}>{key}</span>)}
+              {info.evaluation.confusion_matrix.map((row, rowIndex) => <Fragment key={`row-${rowIndex}`}><span className="confusion-label">{(info.evaluation?.confusion_matrix_classes || [])[rowIndex]}</span>{row.map((value, colIndex) => <span className="confusion-cell" key={`${rowIndex}-${colIndex}`} style={{ background: `rgba(23,107,96,${Math.max(.06, Math.min(.88, value))})`, color: value > .55 ? '#fff' : 'var(--text-main)' }} title={`${(info.evaluation?.confusion_matrix_classes || [])[rowIndex]} predicted as ${(info.evaluation?.confusion_matrix_classes || [])[colIndex]}: ${percent(value)}`}>{percent(value)}</span>)}</Fragment>)}
+            </div></div></section> : <p className="evidence-caption">A confusion matrix was not included in the available evaluation export.</p>}
+            <p className="evidence-caption">Model versions are compared only when their evaluation-manifest hashes match exactly, which binds the same split and labels.</p>
+            {comparableVersions.length > 1 ? <div className="table-scroll"><table className="evidence-class-table"><thead><tr><th>Matched evaluation set</th>{comparableVersions.map((version) => <th key={version.id}>Model {version.id}</th>)}</tr></thead><tbody>{[
+              ['Accuracy', 'accuracy'], ['Balanced accuracy', 'balanced_accuracy'], ['Macro F1', 'macro_f1'], ['Macro AUC', 'macro_ovr_auc'],
+            ].map(([label, key]) => <tr key={key}><td>{label}</td>{comparableVersions.map((version) => <td key={version.id}>{percent(version.metrics[key as keyof typeof version.metrics])}</td>)}</tr>)}</tbody></table></div> : <p className="evidence-caption">Version comparison is locked until at least two model exports share the exact same evaluation-manifest hash.</p>}
           </>
-        )}
-      </div>
-      
-      <div className="card">
-        <h3>Privacy Statement</h3>
-        <p><strong>Nothing is stored or logged.</strong> Your images and data are processed in memory and are discarded immediately after analysis. They are never saved to disk, nor are they used for further training.</p>
-      </div>
-    </div>
+        ) : <p>The local model record could not be loaded.</p>}
+      </section>
+
+      <section className="evidence-section evidence-two-col">
+        <article className="evidence-card"><div className="evidence-icon"><Database size={18} /></div><h2>Data and training</h2><p>{info?.datasets || 'Training data, patient-level split rules, and the original training pipeline are not currently traceable from the checked-in artifacts.'}</p><p>The seven-class EfficientNet-B0 checkpoint {info?.metadata_supported ? 'can use optional age, sex, and body-location features.' : 'uses image pixels only.'} Symptoms do not change its scores.</p></article>
+        <article className="evidence-card"><div className="evidence-icon"><Shield size={18} /></div><h2>How to read a result</h2><p>A ranked score shows how the model’s categories compare for an image. It is not the probability that a person has a disease, and it cannot rule out a condition.</p><p>Heatmaps show image regions that affected a score. They do not establish that the model recognized a clinically meaningful feature.</p></article>
+      </section>
+
+      <section className="evidence-section">
+        <div className="section-title"><span>02</span><div><h2>Current limits</h2><p>Known gaps that are part of the rebuild work.</p></div></div>
+        <ul className="limit-list">{(info?.limitations || ['Training and test data provenance has not been verified from this repository.', 'External validation, calibration, and subgroup performance have not been established.', 'This research tool is not a diagnostic or triage system.']).map((item) => <li key={item}>{item}</li>)}</ul>
+      </section>
+
+      <section className="evidence-section llm-card">
+        <div className="evidence-icon"><Sparkles size={18} /></div><div><h2>Optional AI-written summary</h2><p>The external summary is off unless you select it on the image screen. If selected, model outputs and the context you report are sent to Groq for wording; the image itself is not included in that request. The generated text is educational and may be incomplete.</p></div>
+      </section>
+
+      <div className="evidence-footer"><span>Research & learning</span><a href="/">Explore an image <ArrowUpRight size={15} /></a></div>
+    </main>
   );
 }
