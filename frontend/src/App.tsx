@@ -17,21 +17,37 @@ function Nav() {
 
   return (
     <nav className="nav">
-      <Link to="/" className="brand"><span className="brand-mark"><ScanLine size={17} /></span><span>{t.appTitle}<b>Net</b></span></Link>
-      <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <Link to="/" className="brand">
+        <span className="brand-mark"><ScanLine size={16} /></span>
+        <span>{t.appTitle}<b>Net</b></span>
+      </Link>
+      <div className="nav-links">
         <Link to="/" className={location.pathname === '/' ? 'active' : ''}>{t.analyze}</Link>
-        <Link to="/history" className={location.pathname === '/history' ? 'active' : ''}><HistoryIcon size={15} />{t.historyTab}</Link>
-        <Link to="/library" className={location.pathname === '/library' ? 'active' : ''}><BookOpen size={15} />{t.libraryTab}</Link>
+        <Link to="/history" className={location.pathname === '/history' ? 'active' : ''}><HistoryIcon size={14} />{t.historyTab}</Link>
+        <Link to="/library" className={location.pathname === '/library' ? 'active' : ''}><BookOpen size={14} />{t.libraryTab}</Link>
         <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>{t.about}</Link>
-        <Link to="/privacy" className={location.pathname === '/privacy' ? 'active' : ''}><Shield size={15} />{t.privacyTab}</Link>
-        <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as 'en' | 'hi')} style={{ width: 'auto', margin: 0, padding: '4px' }}>
-          <option value="en">Eng</option>
-          <option value="hi">हिन्दी</option>
+        <Link to="/privacy" className={location.pathname === '/privacy' ? 'active' : ''}><Shield size={14} />{t.privacyTab}</Link>
+        <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as 'en' | 'hi')}>
+          <option value="en">EN</option>
+          <option value="hi">HI</option>
         </select>
-        <button aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} title={theme === 'light' ? 'Dark mode' : 'Light mode'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="theme-toggle secondary">
-          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+        <button
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          className="theme-toggle"
+        >
+          {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
         </button>
-        <button aria-label={accessibility ? 'Turn off accessibility display' : 'Turn on larger text and contrast'} title="Accessibility display" aria-pressed={accessibility} onClick={() => setAccessibility(!accessibility)} className="theme-toggle secondary"><Type size={16} /></button>
+        <button
+          aria-label={accessibility ? 'Turn off accessibility display' : 'Turn on larger text and contrast'}
+          title="Accessibility display"
+          aria-pressed={accessibility}
+          onClick={() => setAccessibility(!accessibility)}
+          className="theme-toggle"
+        >
+          <Type size={15} />
+        </button>
       </div>
     </nav>
   );
@@ -46,7 +62,15 @@ function MainApp() {
   const [historyId, setHistoryId] = useState('');
   const [firstNoticed, setFirstNoticed] = useState('');
 
-  const handleAnalysisComplete = (result: any, file: File, symps: any, patientDetails: { name: string; gender: string }, saveError = '', id = '', noticed = '') => {
+  const handleAnalysisComplete = (
+    result: any,
+    file: File,
+    symps: any,
+    patientDetails: { name: string; gender: string },
+    saveError = '',
+    id = '',
+    noticed = ''
+  ) => {
     setAnalysisResult(result);
     setImageFile(file);
     setSymptoms(symps);
@@ -62,7 +86,20 @@ function MainApp() {
       <div className="container">
         <Routes>
           <Route path="/" element={<Analyze onComplete={handleAnalysisComplete} />} />
-          <Route path="/results" element={<Results result={analysisResult} imageFile={imageFile} symptoms={symptoms} patient={patient} historyError={historyError} historyId={historyId} firstNoticed={firstNoticed} />} />
+          <Route
+            path="/results"
+            element={
+              <Results
+                result={analysisResult}
+                imageFile={imageFile}
+                symptoms={symptoms}
+                patient={patient}
+                historyError={historyError}
+                historyId={historyId}
+                firstNoticed={firstNoticed}
+              />
+            }
+          />
           <Route path="/history" element={<History />} />
           <Route path="/library" element={<Library />} />
           <Route path="/about" element={<About />} />

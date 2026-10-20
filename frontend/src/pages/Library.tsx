@@ -42,12 +42,24 @@ const labels: Record<string, string> = {
   vasc: 'Vascular lesion',
 };
 
+const CATEGORY_TABS = [
+  { id: 'all', label: 'All Categories (35)' },
+  { id: 'mel', label: 'Melanoma' },
+  { id: 'nv', label: 'Nevus' },
+  { id: 'bcc', label: 'Basal Cell' },
+  { id: 'akiec', label: 'Actinic Keratosis' },
+  { id: 'bkl', label: 'Benign Keratosis' },
+  { id: 'df', label: 'Dermatofibroma' },
+  { id: 'vasc', label: 'Vascular' },
+];
+
 export default function Library() {
   const [classes, setClasses] = useState<Record<string, Condition>>({});
   const [exemplars, setExemplars] = useState<Record<string, Exemplar[]>>({});
   const [contentStatus, setContentStatus] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Interactive Side-by-Side Comparison state
   const [compareA, setCompareA] = useState<string>('mel');
@@ -64,271 +76,233 @@ export default function Library() {
       })
       .catch(() => setError('The learning library could not be loaded. Check that the backend is running.'));
 
-    // Fetch local verified exemplars manifest
     fetch('/library_exemplars.json')
       .then((r) => r.json())
       .then((data) => setExemplars(data))
       .catch((err) => console.warn('Could not load library exemplars:', err));
   }, []);
 
-  const entries = useMemo(
-    () =>
-      Object.entries(classes).filter(([key, item]) =>
-        `${key} ${item.name} ${item.overview}`.toLowerCase().includes(search.trim().toLowerCase())
-      ),
-    [classes, search]
-  );
+  const entries = useMemo(() => {
+    return Object.entries(classes).filter(([key, item]) => {
+      const matchesCategory = selectedCategory === 'all' || key === selectedCategory;
+      const matchesSearch = `${key} ${item.name} ${item.overview || ''} ${item.symptoms_signs || ''}`
+        .toLowerCase()
+        .includes(search.trim().toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [classes, search, selectedCategory]);
 
   return (
-    <main className="library-page" style={{ maxWidth: '1240px' }}>
-      <header className="library-heading" style={{ maxWidth: '860px', marginBottom: '28px' }}>
+    <main className="library-page">
+      <header className="library-heading">
         <span className="eyebrow">
-          <BookOpen size={15} /> Clinical Atlas & Learning Library
+          <BookOpen size={14} /> Clinical Atlas & Verified Reference
         </span>
-        <h1>Compare Verified Dermoscopy Hallmarks</h1>
-        <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
-          Explore confirmed histopathological cases from the International Skin Imaging Collaboration (ISIC HAM10000) archive.
-          Compare 5 verified clinical exemplar photos across all 7 lesion categories.
+        <h1>Dermoscopy Hallmarks & Exemplar Matrix</h1>
+        <p>
+          Examine confirmed histopathological cases from the International Skin Imaging Collaboration (ISIC HAM10000) archive.
+          Compare 5 verified reference cases per lesion category across diagnostic hallmarks.
         </p>
         {contentStatus && (
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
-            Reference Status: {contentStatus}
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+            Status: {contentStatus}
           </span>
         )}
       </header>
 
       {/* ============================================================== */}
-      {/* 1. INTERACTIVE SIDE-BY-SIDE LESION COMPARISON WORKSTATION       */}
+      {/* 1. SIDE-BY-SIDE VISUAL TRIAGE COMPARISON WORKSTATION            */}
       {/* ============================================================== */}
-      <section
-        style={{
-          padding: '24px',
-          background: 'var(--Surface)',
-          border: '1.5px solid var(--accent-border)',
-          borderRadius: '16px',
-          marginBottom: '36px',
-          boxShadow: 'var(--shadow-md)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '18px' }}>
+      <section className="library-compare-box">
+        <div className="library-compare-header">
           <div>
             <span className="eyebrow">
-              <SlidersHorizontal size={14} /> Side-by-Side Visual Triage
+              <SlidersHorizontal size={13} /> Side-by-Side Visual Triage
             </span>
-            <h2 style={{ fontSize: '19px', margin: 0 }}>Interactive Condition Comparison Matrix</h2>
+            <h2 style={{ fontSize: '17px', margin: 0 }}>Comparative Hallmarks Matrix</h2>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              Compare:
-              <select
-                value={compareA}
-                onChange={(e) => setCompareA(e.target.value)}
-                style={{ padding: '6px 10px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)' }}
-              >
-                {Object.keys(labels).map((k) => (
-                  <option key={k} value={k}>
-                    {labels[k]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>vs</span>
-            <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              With:
-              <select
-                value={compareB}
-                onChange={(e) => setCompareB(e.target.value)}
-                style={{ padding: '6px 10px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border)' }}
-              >
-                {Object.keys(labels).map((k) => (
-                  <option key={k} value={k}>
-                    {labels[k]}
-                  </option>
-                ))}
-              </select>
-            </label>
+
+          <div className="library-compare-selects">
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Condition A:</span>
+            <select
+              value={compareA}
+              onChange={(e) => setCompareA(e.target.value)}
+              aria-label="Select first condition to compare"
+            >
+              {Object.keys(labels).map((k) => (
+                <option key={k} value={k}>
+                  {labels[k]}
+                </option>
+              ))}
+            </select>
+
+            <span style={{ fontWeight: 700, color: 'var(--text-muted)', padding: '0 4px' }}>vs</span>
+
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Condition B:</span>
+            <select
+              value={compareB}
+              onChange={(e) => setCompareB(e.target.value)}
+              aria-label="Select second condition to compare"
+            >
+              {Object.keys(labels).map((k) => (
+                <option key={k} value={k}>
+                  {labels[k]}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Side-by-Side 5x5 Gallery Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        {/* Side-by-Side 2-Column Comparison */}
+        <div className="library-compare-grid">
           {/* Column A */}
-          <div style={{ padding: '16px', background: 'var(--bg-lighter)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>{labels[compareA]}</strong>
-              <span className="abcde-badge">5 Exemplars</span>
+          <div className="library-compare-col">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '14.5px', color: 'var(--text-main)' }}>{labels[compareA]}</strong>
+              <span className="abcde-badge">5 Verified Cases</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+
+            <div className="library-thumb-strip">
               {(exemplars[compareA] || []).map((img) => (
                 <div
                   key={img.isic_id}
+                  className="library-thumb-item"
                   onClick={() => setActiveModalImage(img)}
-                  style={{
-                    position: 'relative',
-                    aspectRatio: '1',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: '1px solid var(--border)',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                  title={`Click to inspect ${img.isic_id}`}
+                  title={`Inspect ${img.isic_id}`}
                 >
                   <img
                     src={img.local_url}
                     alt={img.isic_id}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = img.remote_thumb;
                     }}
                   />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      bottom: '2px',
-                      right: '2px',
-                      background: 'rgba(0,0,0,0.65)',
-                      color: 'white',
-                      fontSize: '8px',
-                      padding: '1px 3px',
-                      borderRadius: '3px',
-                    }}
-                  >
+                  <div className="thumb-tag">
+                    <span>{img.isic_id.replace('ISIC_', '#')}</span>
                     <Eye size={10} />
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
-            <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {classes[compareA]?.overview?.slice(0, 160)}...
+
+            <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {classes[compareA]?.overview?.slice(0, 150) || classes[compareA]?.what_it_is?.slice(0, 150)}...
             </p>
           </div>
 
           {/* Column B */}
-          <div style={{ padding: '16px', background: 'var(--bg-lighter)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>{labels[compareB]}</strong>
-              <span className="abcde-badge">5 Exemplars</span>
+          <div className="library-compare-col">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <strong style={{ fontSize: '14.5px', color: 'var(--text-main)' }}>{labels[compareB]}</strong>
+              <span className="abcde-badge">5 Verified Cases</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+
+            <div className="library-thumb-strip">
               {(exemplars[compareB] || []).map((img) => (
                 <div
                   key={img.isic_id}
+                  className="library-thumb-item"
                   onClick={() => setActiveModalImage(img)}
-                  style={{
-                    position: 'relative',
-                    aspectRatio: '1',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: '1px solid var(--border)',
-                    boxShadow: 'var(--shadow-sm)',
-                  }}
-                  title={`Click to inspect ${img.isic_id}`}
+                  title={`Inspect ${img.isic_id}`}
                 >
                   <img
                     src={img.local_url}
                     alt={img.isic_id}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = img.remote_thumb;
                     }}
                   />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      bottom: '2px',
-                      right: '2px',
-                      background: 'rgba(0,0,0,0.65)',
-                      color: 'white',
-                      fontSize: '8px',
-                      padding: '1px 3px',
-                      borderRadius: '3px',
-                    }}
-                  >
+                  <div className="thumb-tag">
+                    <span>{img.isic_id.replace('ISIC_', '#')}</span>
                     <Eye size={10} />
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
-            <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {classes[compareB]?.overview?.slice(0, 160)}...
+
+            <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {classes[compareB]?.overview?.slice(0, 150) || classes[compareB]?.what_it_is?.slice(0, 150)}...
             </p>
           </div>
         </div>
       </section>
 
-      {/* Search Input */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', maxWidth: '520px' }}>
-        <div className="history-search" style={{ width: '100%' }}>
-          <Search size={18} />
+      {/* ============================================================== */}
+      {/* 2. CATEGORY FILTER TABS & SEARCH BAR                           */}
+      {/* ============================================================== */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+        <div className="library-filter-bar" style={{ margin: 0 }}>
+          {CATEGORY_TABS.map((tab) => (
+            <button
+              type="button"
+              key={tab.id}
+              className={`filter-pill ${selectedCategory === tab.id ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="history-search" style={{ maxWidth: '340px', minWidth: '220px' }}>
+          <Search size={15} color="var(--text-muted)" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search symptoms, signs, risk factors, or condition..."
+            placeholder="Filter symptoms or condition..."
+            aria-label="Filter conditions"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              style={{ color: 'var(--text-muted)', padding: '2px', display: 'grid', placeItems: 'center' }}
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
       </div>
 
       {error && <p className="form-error" role="alert">{error}</p>}
 
       {/* ============================================================== */}
-      {/* 2. CATEGORY ATLAS CARDS WITH 5 EMBEDDED CLINICAL IMAGES        */}
+      {/* 3. CATEGORY ATLAS CARDS WITH 5 EMBEDDED CLINICAL IMAGES        */}
       {/* ============================================================== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+      <div className="library-card-grid">
         {entries.map(([key, item]) => {
           const catExemplars = exemplars[key] || [];
           return (
-            <article
-              key={key}
-              style={{
-                padding: '22px',
-                background: 'var(--Surface)',
-                border: '1px solid var(--border)',
-                borderRadius: '16px',
-                boxShadow: 'var(--shadow-sm)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
+            <article key={key} className="library-atlas-card">
               {/* Card Header */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
-                <span className="step-number" style={{ textTransform: 'uppercase', fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+                <span className="library-code" style={{ textTransform: 'uppercase' }}>
                   {key}
                 </span>
-                <div>
-                  <h2 style={{ fontSize: '17px', margin: '0 0 2px' }}>{item.name || labels[key] || key}</h2>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Verified ISIC HAM10000 Reference</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={{ fontSize: '16px', margin: '0 0 2px' }}>{item.name || labels[key] || key}</h2>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                    ISIC Archive Verified Benchmark
+                  </span>
                 </div>
               </div>
 
               {/* 5 Exemplar Images Thumbnails Bar */}
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Verified Case Exemplars ({catExemplars.length} / 5):
+              <div style={{ marginBottom: '14px' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                  Confirmed Histopathology Cases ({catExemplars.length} / 5):
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                <div className="library-thumb-strip">
                   {catExemplars.map((ex) => (
                     <div
                       key={ex.isic_id}
+                      className="library-thumb-item"
                       onClick={() => setActiveModalImage(ex)}
-                      style={{
-                        aspectRatio: '1',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        border: '1px solid var(--border)',
-                        background: 'var(--bg-subtle)',
-                        transition: 'transform 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                       title={`Inspect ${ex.isic_id} (${ex.diagnosis})`}
                     >
                       <img
                         src={ex.local_url}
                         alt={ex.isic_id}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = ex.remote_thumb;
                         }}
@@ -339,47 +313,35 @@ export default function Library() {
               </div>
 
               {/* Clinical Description */}
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1, lineHeight: 1.6, marginBottom: '14px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: '14px' }}>
                 {item.overview || item.what_it_is}
               </p>
 
               {/* Expandable Clinical Details */}
-              <div style={{ display: 'grid', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+              <div className="library-details-group">
                 {item.symptoms_signs && (
-                  <details style={{ fontSize: '13px' }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--accent)' }}>
-                      Recognized Symptoms & Visual Signs
-                    </summary>
-                    <p style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>
-                      {item.symptoms_signs}
-                    </p>
+                  <details className="library-details-item">
+                    <summary>Diagnostic Signs & Visual Hallmarks</summary>
+                    <p>{item.symptoms_signs}</p>
                   </details>
                 )}
                 {item.causes_risks && (
-                  <details style={{ fontSize: '13px' }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--accent)' }}>
-                      Causes & Risk Factors
-                    </summary>
-                    <p style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>
-                      {item.causes_risks}
-                    </p>
+                  <details className="library-details-item">
+                    <summary>Etiology & Known Risk Factors</summary>
+                    <p>{item.causes_risks}</p>
                   </details>
                 )}
                 {item.doctor_assessment && (
-                  <details style={{ fontSize: '13px' }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--accent)' }}>
-                      Dermatologist Assessment Protocol
-                    </summary>
-                    <p style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>
-                      {item.doctor_assessment}
-                    </p>
+                  <details className="library-details-item">
+                    <summary>Dermatological Workup Protocol</summary>
+                    <p>{item.doctor_assessment}</p>
                   </details>
                 )}
               </div>
 
               {/* Reference Links */}
               {item.links && item.links.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
                   {item.links.map((url) => (
                     <a
                       href={url}
@@ -390,14 +352,14 @@ export default function Library() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
-                        padding: '4px 8px',
+                        padding: '3px 7px',
                         background: 'var(--bg-subtle)',
                         borderRadius: '6px',
                         fontSize: '11px',
                         fontWeight: 600,
                       }}
                     >
-                      {new URL(url).hostname.replace(/^www\./, '')} <ArrowUpRight size={12} />
+                      {new URL(url).hostname.replace(/^www\./, '')} <ArrowUpRight size={11} />
                     </a>
                   ))}
                 </div>
@@ -408,40 +370,17 @@ export default function Library() {
       </div>
 
       {/* ============================================================== */}
-      {/* 3. LIGHTBOX MODAL FOR HIGH-RES INSPECTION                     */}
+      {/* 4. LIGHTBOX MODAL FOR HIGH-RES INSPECTION                     */}
       {/* ============================================================== */}
       {activeModalImage && (
-        <div
-          onClick={() => setActiveModalImage(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 100,
-            padding: '20px',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--Surface)',
-              padding: '24px',
-              borderRadius: '16px',
-              maxWidth: '480px',
-              width: '100%',
-              boxShadow: 'var(--shadow-lg)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div className="lightbox-backdrop" onClick={() => setActiveModalImage(null)}>
+          <div className="lightbox-dialog" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
                 <span className="eyebrow" style={{ marginBottom: 0 }}>
-                  <ShieldCheck size={14} /> Confirmed Dermoscopy Case
+                  <ShieldCheck size={13} /> Confirmed Dermoscopy Case
                 </span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '18px' }}>{activeModalImage.isic_id}</h3>
+                <h3 style={{ margin: '2px 0 0', fontSize: '17px' }}>{activeModalImage.isic_id}</h3>
               </div>
               <button
                 type="button"
@@ -451,31 +390,19 @@ export default function Library() {
                   border: 0,
                   cursor: 'pointer',
                   color: 'var(--text-muted)',
+                  padding: '4px',
                 }}
+                aria-label="Close modal"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div
-              style={{
-                borderRadius: '10px',
-                overflow: 'hidden',
-                background: '#000',
-                aspectRatio: '1',
-                display: 'grid',
-                placeItems: 'center',
-                marginBottom: '16px',
-              }}
-            >
-              <img
-                src={activeModalImage.local_url}
-                alt={activeModalImage.isic_id}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
+            <div className="lightbox-image-box">
+              <img src={activeModalImage.local_url} alt={activeModalImage.isic_id} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginBottom: '14px' }}>
+            <div className="lightbox-grid">
               <div className="brief-metric-box">
                 <span>Histopathologic Diagnosis</span>
                 <strong>{activeModalImage.diagnosis}</strong>
@@ -503,7 +430,7 @@ export default function Library() {
               className="button-primary"
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              View on ISIC Archive <ExternalLink size={15} />
+              View on ISIC Archive <ExternalLink size={14} />
             </a>
           </div>
         </div>

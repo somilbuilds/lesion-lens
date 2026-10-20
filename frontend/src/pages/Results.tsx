@@ -531,54 +531,28 @@ export default function Results({
             </Link>
           </div>
 
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
             Compare your lesion against 5 biopsy-confirmed dermoscopic exemplars of {labelMap[topClass]} from the HAM10000 archive. Click any thumbnail to view case metadata.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+          <div className="library-thumb-strip">
             {categoryExemplars.map((ex) => (
               <div
                 key={ex.isic_id}
+                className="library-thumb-item"
                 onClick={() => setActiveModalExemplar(ex)}
-                style={{
-                  position: 'relative',
-                  aspectRatio: '1',
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: '1px solid var(--border)',
-                  boxShadow: 'var(--shadow-sm)',
-                  background: 'var(--bg-subtle)',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 title={`Inspect ${ex.isic_id}`}
               >
                 <img
                   src={ex.local_url}
                   alt={ex.isic_id}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = ex.remote_thumb;
                   }}
                 />
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    insetInline: 0,
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-                    padding: '4px 6px',
-                    color: 'white',
-                    fontSize: '10px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="thumb-tag">
                   <span>{ex.isic_id.replace('ISIC_', '#')}</span>
-                  <Eye size={11} />
+                  <Eye size={10} />
                 </div>
               </div>
             ))}
@@ -769,37 +743,14 @@ export default function Results({
 
       {/* Lightbox Modal for Results Screen */}
       {activeModalExemplar && (
-        <div
-          onClick={() => setActiveModalExemplar(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 100,
-            padding: '20px',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--Surface)',
-              padding: '24px',
-              borderRadius: '16px',
-              maxWidth: '480px',
-              width: '100%',
-              boxShadow: 'var(--shadow-lg)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div className="lightbox-backdrop" onClick={() => setActiveModalExemplar(null)}>
+          <div className="lightbox-dialog" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
                 <span className="eyebrow" style={{ marginBottom: 0 }}>
-                  <ShieldCheck size={14} /> Confirmed Clinical Case
+                  <ShieldCheck size={13} /> Confirmed Clinical Case
                 </span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '18px' }}>{activeModalExemplar.isic_id}</h3>
+                <h3 style={{ margin: '2px 0 0', fontSize: '17px' }}>{activeModalExemplar.isic_id}</h3>
               </div>
               <button
                 type="button"
@@ -809,31 +760,19 @@ export default function Results({
                   border: 0,
                   cursor: 'pointer',
                   color: 'var(--text-muted)',
+                  padding: '4px',
                 }}
+                aria-label="Close modal"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div
-              style={{
-                borderRadius: '10px',
-                overflow: 'hidden',
-                background: '#000',
-                aspectRatio: '1',
-                display: 'grid',
-                placeItems: 'center',
-                marginBottom: '16px',
-              }}
-            >
-              <img
-                src={activeModalExemplar.local_url}
-                alt={activeModalExemplar.isic_id}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
+            <div className="lightbox-image-box">
+              <img src={activeModalExemplar.local_url} alt={activeModalExemplar.isic_id} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginBottom: '14px' }}>
+            <div className="lightbox-grid">
               <div className="brief-metric-box">
                 <span>Histopathologic Diagnosis</span>
                 <strong>{activeModalExemplar.diagnosis}</strong>
@@ -861,7 +800,7 @@ export default function Results({
               className="button-primary"
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              View on ISIC Archive <ExternalLink size={15} />
+              View on ISIC Archive <ExternalLink size={14} />
             </a>
           </div>
         </div>
