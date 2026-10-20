@@ -61,3 +61,7 @@ download_library_images.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Keep README screenshots
+!docs/screenshots/
+!docs/screenshots/*.png

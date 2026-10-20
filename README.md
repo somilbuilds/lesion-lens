@@ -1,160 +1,312 @@
-# SkinLesionNet — Clinical Dermatology Intelligence & Explainability Platform
+<div align="center">
 
-SkinLesionNet is a modern clinical-grade research and learning platform for exploring skin lesion image classification, understanding dermatological morphology (ABCDE), and preparing for doctor consultations.
+<img src="docs/banner.svg" alt="Lesion Lens — explainable deep learning for skin-lesion classification and risk triage" width="100%"/>
 
-A model score is an adjunct research tool, not a definitive diagnosis, and does not replace a clinical biopsy.
+<br/>
 
----
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EfficientNet--B0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React_19-Vite_·_TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0f766e?style=for-the-badge)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Research_Prototype-f59e0b?style=for-the-badge)](#%EF%B8%8F-important-disclaimer)
 
-## What's New & Upgraded
+**Upload a photo of a skin lesion. Get an explainable, non-diagnostic triage result — scores, uncertainty, visual evidence, and a plain-language path to a clinician.**
 
-### 1. Multi-Modal Explainability & Computer Vision ABCDE Engine
-- **Computer Vision Morphology Extraction**: Automatically segments the lesion and computes quantitative ABCDE features:
-  - **A (Asymmetry Index)**: Orthogonal axis flip divergence score (0.0 to 1.0).
-  - **B (Border Irregularity)**: Isoperimetric compactness ratio ($P^2 / 4\pi A$) and margin roughness.
-  - **C (Color Variegation)**: Identifies presence of 6 clinical dermoscopic color zones (light brown, dark brown, black, red/erythematous, slate blue-gray, white/hypopigmentation).
-  - **D (Diameter & Area)**: Equivalent pixel diameter and relative frame coverage.
-- **Verbal Explainability Rationale**: Generates plain-English clinical explanations tying morphological contours to classification scores.
-- **5-Mode Diagnostic Visualizer**:
-  1. *Original Photo*: High-resolution unedited view.
-  2. *Lesion Border*: Computer-vision segmented boundary contour in neon green.
-  3. *Attribution Overlay*: High-resolution Grad-CAM activation overlay.
-  4. *Heatmap*: Standalone activation intensity map.
-  5. *Perturbation Patch*: 32px patch occlusion sensitivity analysis.
+[Features](#-features) · [Screenshots](#-screenshots) · [How it works](#-how-it-works) · [Quick start](#-quick-start) · [Results](#-measured-performance) · [Structure](#-project-structure)
 
-### 2. Interactive Clinical AI Copilot (Powered by Groq LLM)
-- Multi-turn interactive conversational copilot grounded in the user's specific lesion morphology and clinical guidelines.
-- Patients can ask follow-up questions about their asymmetry scores, border irregularities, and how to discuss findings with their doctor.
-- Includes 1-click clinical prompt pills for common patient inquiries.
-
-### 3. ISIC HAM10000 35-Image Clinical Atlas & Comparison
-- Complete 35-image reference atlas (5 histopathologically confirmed cases for each of the 7 diagnostic categories) sourced directly from the official ISIC HAM10000 collection.
-- **Interactive Side-by-Side Comparison Matrix**: Compare any two conditions (e.g. Melanoma vs. Benign Nevus) side-by-side with 5 exemplar images each.
-- **Results Comparison Gallery**: View 5 confirmed clinical cases of the diagnosed category directly on the results screen.
-- High-resolution modal with patient demographics, anatomical site, and biopsy confirmation method.
-
-### 4. Pre-Appointment Doctor Consultation Brief (PDF / Print-Ready)
-- Standardized medical consultation memo summarizing:
-  - Patient & Anatomical Body Location.
-  - Primary differential diagnosis and calibrated probabilities.
-  - Recommended questions to ask the dermatologist.
-  - User visit notes automatically saved in browser IndexedDB.
-  - Print/PDF export formatted for clinical review.
-
-### 5. Out-of-Distribution (OOD) Guardrail
-- Automated skin chrominance validation in YCrCb and HSV color spaces to reject non-skin images (floors, pets, walls, artifacts).
-
-### 6. Modern Clinical Design System
-- Clean, accessible typography (14px–16px body, 18px–28px card headings).
-- Modern medical color palette with WCAG AA compliant contrast.
-- 1-click Anatomical Body Location Selector (Face/Scalp, Neck, Chest, Back, Arm, Hand, Leg, Foot).
+</div>
 
 ---
 
-## Seven Diagnostic Categories
+## ⚠️ Important disclaimer
 
-1. **mel**: Melanoma
-2. **bcc**: Basal cell carcinoma
-3. **akiec**: Actinic keratosis / Squamous cell carcinoma in situ
-4. **bkl**: Benign keratosis-like lesion (seborrheic keratosis, solar lentigo)
-5. **nv**: Melanocytic nevus (Mole)
-6. **df**: Dermatofibroma
-7. **vasc**: Vascular lesion (cherry angioma, pyogenic granuloma)
+> **Lesion Lens is an educational and research prototype. It is not a medical device and does not provide a diagnosis.**
+> Model scores are *relative rankings*, not calibrated disease probabilities. A "benign" or "nevus" result is **never** reassurance — melanoma and moles can look alike, and this model misses some melanomas. Always show any changing or worrying lesion to a qualified dermatologist.
 
 ---
 
-## Run Locally
+## ✨ Features
 
-### Requirements
-- Python 3.11+
-- Node.js 18+
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### Setup & Launch
+### 🧠 Classifier
+- **EfficientNet-B0** (`timm`), 224 × 224 input, CPU inference
+- **7 diagnostic classes** from the HAM10000 label set
+- **4-view test-time augmentation** (original, H-flip, V-flip, both)
+- Per-view breakdown and consensus shown in the UI
+
+### 🔍 Explainability
+- **Grad-CAM** attribution overlay and standalone heatmap
+- **Lesion border** outline derived from the activation map
+- **32 px patch-occlusion** sensitivity test
+- **ABCDE morphology engine** — asymmetry, border, colour variegation, diameter
+- 5-mode visualizer: *Original · Lesion Border · Attribution Overlay · Heatmap · Perturbation Patch*
+
+</td>
+<td width="50%" valign="top">
+
+### 🛡️ Safety rails
+- **Image-quality gate** — rejects/flags tiny, blurry or non-skin images (YCrCb + HSV chroma checks)
+- **Uncertainty** from score margin, normalised entropy and view agreement; inconclusive results withhold a confident label
+- **Rule-based risk tiers**: *routine monitoring → see a doctor soon → urgent review*, driven by explicit, inspectable rules and reported symptoms
+
+### 🩺 Clinical workflow
+- **Clinical AI Copilot** (optional, Groq LLM) for follow-up questions
+- **35-image ISIC HAM10000 atlas** with a side-by-side comparison matrix
+- **Pre-appointment brief** — print/PDF-ready summary with questions for your dermatologist
+- **History** stored in your browser (IndexedDB), searchable and deletable
+- Light / dark themes, English and Hindi
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📸 Screenshots
+
+<table>
+<tr>
+<td width="50%"><b>Analyze</b> — upload or camera capture, body site and optional context<br/><img src="docs/screenshots/analyze.png" alt="Analyze page"/></td>
+<td width="50%"><b>Results</b> — lesion border, attribution views and differential ranking<br/><img src="docs/screenshots/results.png" alt="Results page"/></td>
+</tr>
+<tr>
+<td width="50%"><b>Library</b> — dermoscopy hallmarks and side-by-side exemplar matrix<br/><img src="docs/screenshots/library.png" alt="Library page"/></td>
+<td width="50%"><b>History</b> — past analyses with full model scores, stored on-device<br/><img src="docs/screenshots/history.png" alt="History page"/></td>
+</tr>
+<tr>
+<td colspan="2"><b>Research &amp; evidence</b> — recorded evaluation metrics, with missing fields shown as unavailable rather than estimated<br/><img src="docs/screenshots/evaluation.png" alt="Research and evidence page" width="60%"/></td>
+</tr>
+</table>
+
+---
+
+## 🔬 How it works
+
+```mermaid
+flowchart LR
+    A[📷 Photo + optional details] --> B[Upload validation<br/>JPEG/PNG/WebP ≤ 10 MB<br/>EXIF stripped, in memory only]
+    B --> C{Quality & OOD gate}
+    C -- rejected --> R[Reasons returned]
+    C -- ok / warning --> D[Resize · centre-crop · normalise]
+    D --> E[EfficientNet-B0<br/>4-view TTA]
+    E --> F[Uncertainty<br/>margin · entropy · agreement]
+    E --> G[Grad-CAM · border · occlusion · ABCDE]
+    F --> H[Rule-based risk tier]
+    G --> I[Result assembly]
+    H --> I
+    I --> J[Optional Groq wording<br/>scores only, never the image]
+    I --> K[🖥️ React UI]
+    J --> K
+```
+
+**The seven classes**
+
+| Code | Class | Risk group |
+|:--:|---|---|
+| `mel` | Melanoma | 🔴 Malignant |
+| `bcc` | Basal cell carcinoma | 🔴 Malignant |
+| `akiec` | Actinic keratosis / SCC in situ | 🟠 Pre-cancerous |
+| `bkl` | Benign keratosis-like lesion | 🟢 Benign |
+| `nv` | Melanocytic nevus (mole) | 🟢 Benign |
+| `df` | Dermatofibroma | 🟢 Benign |
+| `vasc` | Vascular lesion | 🟢 Benign |
+
+Age, sex and other optional details **never change the class prediction**. Reported symptoms affect only the risk tier and the guidance notes.
+
+---
+
+## 🚀 Quick start
+
+**Requirements:** Python 3.11+ and Node.js 18+
+
 ```bash
-# Easy launcher:
+git clone https://github.com/somilbuilds/lesion-lens.git
+cd lesion-lens
+
+# One command: starts the FastAPI backend (8000) and the Vite frontend (5173)
 python start_local.py
 ```
 
-Or run services in separate terminal tabs:
+Or run the services separately:
+
 ```bash
-# Tab 1: Backend
+# Terminal 1 — backend
 python start_backend.py
 
-# Tab 2: Frontend
+# Terminal 2 — frontend
 cd frontend
 npm install
 npm run dev
 ```
 
----
+Then open **http://localhost:5173**.
 
-## Zero-Cost Hybrid Deployment (Laptop Compute + Render Frontend)
+<details>
+<summary><b>🤖 Enable the Clinical AI Copilot (optional)</b></summary>
 
-You can run your heavy PyTorch and OpenCV models on your laptop for free, while Render hosts the static React frontend accessible to anyone on the web.
+<br/>
 
-When you run the CI/CD bridge script:
-1. It verifies/starts your local FastAPI backend on a flexible port (`BACKEND_PORT=8000`).
-2. Creates an encrypted **Cloudflare Tunnel** (`*.trycloudflare.com`).
-3. Uses the **Render REST API** with your `RENDER_API_KEY` to update `VITE_API_BASE_URL` on your Render static site and trigger a build.
-4. Provides an **Instant Access URL** (`https://lesion-lens-1.onrender.com/?backend=<tunnel_url>`) so you can test immediately without waiting for Render's build to finish!
-5. Preserves your local Vite dev server (`http://localhost:5173`) so you can run both simultaneously.
+Copy `.env.example` to `.env` and add a [Groq](https://console.groq.com) key:
 
-### Running the Bridge:
-```powershell
-# PowerShell shortcut:
-.\run_tunnel.ps1
-
-# Or with custom ports / flags:
-.\run_tunnel.ps1 -Port 8000 -StartFrontend
-
-# Or with Python directly:
-python scripts/connect_render.py --port 8000
-```
-
-### Groq API Configuration (Optional)
-To enable the interactive Clinical AI Copilot, copy `.env.example` to `.env` and add your Groq API key:
 ```env
 GROQ_API_KEY=your_key_here
 GROQ_MODEL=openai/gpt-oss-120b
 ```
-*(If no key is provided, the platform automatically presents rich local ABCDE and morphological reference cards).*
 
----
+Without a key the app falls back to the local reference content and ABCDE cards. When a key is set, the leading class, scores, uncertainty, symptoms and any details you enter are sent to the external service — **the image is not.**
 
-## Running Automated Tests
+</details>
+
+<details>
+<summary><b>🌐 Zero-cost hybrid deployment (laptop compute + Render frontend)</b></summary>
+
+<br/>
+
+Run the PyTorch/OpenCV backend on your own machine and host only the static React frontend on Render. The bridge script:
+
+1. Verifies or starts the local FastAPI backend (`BACKEND_PORT`, default `8000`)
+2. Opens a Cloudflare Tunnel (`*.trycloudflare.com`)
+3. Uses the Render API to update `VITE_API_BASE_URL` and trigger a build
+4. Prints an instant-access URL so you can test before the build finishes
+
+```powershell
+.\run_tunnel.ps1                              # PowerShell shortcut
+.\run_tunnel.ps1 -Port 8000 -StartFrontend    # custom port + local frontend
+python scripts/connect_render.py --port 8000  # or call Python directly
+```
+
+Requires `RENDER_API_KEY` (and optionally `CLOUDFLARE_TUNNEL_TOKEN`) in `.env`.
+
+</details>
+
+### 🧪 Tests
 
 ```bash
 cd backend
-venv\Scripts\python.exe -m pytest tests
+python -m pytest tests
 ```
-*All 8 unit and integration tests covering preprocessing, calibration, OOD rejection, ABCDE extraction, and Copilot endpoints pass 100%.*
+
+### 🔌 API
+
+| Method | Endpoint | Purpose |
+|:--:|---|---|
+| `GET` | `/api/health` | Liveness check |
+| `GET` | `/api/model-info` | Model description, classes, stored test results |
+| `GET` | `/api/conditions` | Condition reference library |
+| `POST` | `/api/analyze` | Analyze an image (multipart) with optional context |
+| `POST` | `/api/chat/copilot` | Grounded follow-up chat (needs a Groq key) |
 
 ---
 
-## Project Structure
+## 📊 Measured performance
+
+Two sets of results are stored in the repository and **they disagree**. Both are shown here; treat the lower set as the conservative estimate.
+
+| Metric | Training-log record (`models/metrics.json`) | Served by `/api/model-info` |
+|---|:--:|:--:|
+| Accuracy | 0.863 | 0.794 |
+| Balanced accuracy | 0.859 | 0.744 |
+| Macro AUC | 0.967 | 0.943 |
+| Macro F1 | 0.814 | 0.69 |
+| Test images | not recorded | 1,203 |
+
+**Per-class recall**
+
+| Class | Training-log record | Served record |
+|---|:--:|:--:|
+| akiec | 0.846 | 0.67 |
+| bcc | 0.925 | 0.79 |
+| bkl | 0.764 | 0.57 |
+| df | 0.875 | 1.00 |
+| **mel** | **0.788** | **0.59** |
+| nv | 0.894 | 0.88 |
+| vasc | 0.920 | 0.71 |
+
+> In the served record, melanoma precision is 0.47 — of 112 true melanomas, 31 were labelled naevus, and 46 naevi were labelled melanoma. This is why the system never states a diagnosis, raises advice tiers on the *melanoma score* even when melanoma is not the top class, and always adds a warning to naevus results.
+
+### Known limitations
+
+- Training data are mostly dermoscopic images (plus Brazilian smartphone photos in one record); performance on other skin tones, cameras and body sites is **unverified**.
+- Scores are **not calibrated**; no temperature file is shipped, so temperature is 1.0.
+- Grad-CAM, the outline and occlusion show **model sensitivity, not clinical features**.
+- The skin-colour check is a simple chroma heuristic and can accept or reject wrongly.
+- The condition reference text was drafted by AI from public sources and **must be reviewed by a clinician** before any real-world use.
+- Authentication, a database, clinician workflows and regulatory validation are out of scope.
+
+---
+
+## 🗂️ Project structure
 
 ```
+lesion-lens/
 ├── backend/
 │   ├── app/
-│   │   ├── config.py           # App configuration & thresholds
-│   │   ├── main.py             # FastAPI REST endpoints & Copilot chat
-│   │   ├── model.py            # PyTorch inference, TTA, and Grad-CAM
-│   │   ├── reporting.py        # Groq Copilot chat & clinical memo generator
-│   │   ├── vision_features.py  # Computer Vision ABCDE & OOD engine
-│   │   └── content/            # Condition medical reference library
-│   └── tests/                  # Pytest unit & integration test suite
+│   │   ├── main.py              # FastAPI app, validation, endpoints, Copilot chat
+│   │   ├── model.py             # Pre-processing, TTA inference, uncertainty, risk tier, Grad-CAM, occlusion
+│   │   ├── vision_features.py   # ABCDE extraction + out-of-distribution guardrail
+│   │   ├── reporting.py         # Groq wording / clinical memo with local fallback
+│   │   ├── config.py            # Classes, risk groups, thresholds
+│   │   └── content/             # Condition reference library
+│   └── tests/                   # pytest suite
 ├── frontend/
-│   ├── public/
-│   │   ├── library_exemplars.json  # 35-case clinical atlas manifest
-│   │   └── library_images/         # 5 verified images per category
+│   ├── public/                  # Atlas manifest + exemplar images, research charts
 │   └── src/
-│       ├── api.ts              # Backend API & Copilot client
-│       ├── index.css           # Modern clinical design system tokens
-│       └── pages/
-│           ├── Analyze.tsx     # Intake, camera, body site selector
-│           ├── Results.tsx     # Workspace, 5-mode visualizer, ABCDE, chat
-│           ├── Library.tsx     # Atlas, 5x5 comparison matrix, lightbox
-│           ├── History.tsx     # Browser IndexedDB analysis history
-│           └── About.tsx       # Model evidence & training records
-└── models/                     # PyTorch model weights & evaluation metrics
+│       ├── api.ts · history.ts · i18n.ts · imageQuality.ts
+│       └── pages/               # Analyze · Results · Library · History · About · Privacy
+├── models/                      # Weights + recorded metrics (metrics.json, test_metrics.json)
+├── docs/                        # Banner and screenshots
+├── scripts/connect_render.py    # Cloudflare Tunnel ↔ Render bridge
+├── start_local.py               # One-command launcher
+└── skinlesion_train_eval_colab.ipynb
 ```
+
+---
+
+## 🔒 Privacy
+
+- Images are decoded **in memory** and never written to disk by the backend; EXIF metadata is dropped.
+- Analysis history lives only in **your browser's** storage and can be deleted at any time.
+- The optional Groq Copilot receives text (scores and details you enter), never the image.
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Reconcile the two result records: publish evaluation code and the test list, re-evaluate on one documented split
+- [ ] Train and test on more diverse data (darker skin tones, more smartphone photos) and report per-source / per-skin-tone metrics
+- [ ] Calibrate with temperature scaling and add confidence intervals
+- [ ] Complete the small-CNN / ResNet18 / EfficientNet-B0 comparison on one split
+- [ ] Replace the Grad-CAM-derived outline with a trained segmentation model
+- [ ] Clinician review of the reference content; mobile usability study
+- [ ] CI, rate limiting, authentication and monitoring before any deployment beyond a demo
+
+---
+
+## 👥 Team
+
+Built as a mini project for **AI&ML in Healthcare Lab (HAIMLSBL701)**, Department of Computer Engineering, **A.P. Shah Institute of Technology**, University of Mumbai (2026–27), under the guidance of **Prof. Vijaya Bharathi J**.
+
+| Name | |
+|---|---|
+| Somil Dedhiya | [@somilbuilds](https://github.com/somilbuilds) |
+| Uday Dutta | |
+| Parth Inamdar | |
+| Bhavani Das | |
+
+---
+
+## 🙏 Acknowledgements
+
+[HAM10000](https://doi.org/10.1038/sdata.2018.161) · [PAD-UFES-20](https://doi.org/10.1016/j.dib.2020.106221) · [EfficientNet](https://arxiv.org/abs/1905.11946) · [Grad-CAM](https://arxiv.org/abs/1610.02391) · [timm](https://github.com/huggingface/pytorch-image-models) · [PyTorch](https://pytorch.org/) · [FastAPI](https://fastapi.tiangolo.com/) · [React](https://react.dev/)
+
+## 📄 License
+
+Released under the [MIT License](LICENSE). Not for clinical use.
+
+<div align="center">
+<sub>If you or someone you know has a mole or spot that is changing, bleeding or worrying — see a dermatologist. 🩺</sub>
+</div>
