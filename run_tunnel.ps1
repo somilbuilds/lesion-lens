@@ -51,5 +51,5 @@ if ($StartFrontend) {
     $argsList += "--start-frontend"
 }
 
-Write-Host "Launching SkinLesionNet Cloudflare & Render CI/CD bridge..." -ForegroundColor Cyan
+Write-Host "Launching LesionLens Cloudflare & Render CI/CD bridge..." -ForegroundColor Cyan
 & $pythonExe $argsList

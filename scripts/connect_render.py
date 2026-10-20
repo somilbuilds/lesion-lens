@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SkinLesionNet - Automated Cloudflare Tunnel & Render CI/CD Bridge
-================================================================
-This script turns your local laptop into the compute engine for SkinLesionNet,
+LesionLens - Automated Cloudflare Tunnel & Render CI/CD Bridge
+==============================================================
+This script turns your local laptop into the compute engine for LesionLens,
 while your Render static site serves the frontend.
 
 Workflow:
@@ -220,7 +220,7 @@ def main():
     render_service_id = args.service_id or env.get("RENDER_SERVICE_ID", "srv-db3dis5g1s2s73a0uovg")
 
     print("\n" + "="*70)
-    print("  SkinLesionNet - Laptop Backend & Render Cloudflare Tunnel Bridge")
+    print("  LesionLens - Laptop Backend & Render Cloudflare Tunnel Bridge")
     print("="*70)
     print(f"• Laptop Backend Port:  {backend_port}")
     print(f"• Localhost Frontend:   http://localhost:{frontend_port}")

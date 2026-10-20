@@ -19,7 +19,7 @@ function Nav() {
     <nav className="nav">
       <Link to="/" className="brand">
         <span className="brand-mark"><ScanLine size={16} /></span>
-        <span>{t.appTitle}<b>Net</b></span>
+        <span>{t.appTitle}<b>Lens</b></span>
       </Link>
       <div className="nav-links">
         <Link to="/" className={location.pathname === '/' ? 'active' : ''}>{t.analyze}</Link>

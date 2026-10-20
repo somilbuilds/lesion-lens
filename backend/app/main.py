@@ -14,7 +14,7 @@ from app.model import SkinModel
 from app.config import config
 from app.reporting import generate_report, copilot_chat
 
-app = FastAPI(title="SkinLesionNet Clinical API", version="2.0.0")
+app = FastAPI(title="LesionLens Clinical API", version="2.0.0")
 
 # Allow local frontend during development/demo, plus the deployed frontend.
 frontend_origins = [

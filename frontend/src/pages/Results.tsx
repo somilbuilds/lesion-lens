@@ -75,7 +75,7 @@ export default function Results({
     {
       role: 'assistant',
       content:
-        "Hello! I am your SkinLesionNet Clinical Copilot. I've reviewed your image's ABCDE morphological findings and classification scores. Ask me anything about your results, what the scores mean, or how to prepare for your doctor's appointment.",
+        "Hello! I am your LesionLens Clinical Copilot. I've reviewed your image's ABCDE morphological findings and classification scores. Ask me anything about your results, what the scores mean, or how to prepare for your doctor's appointment.",
     },
   ]);
   const [inputQuestion, setInputQuestion] = useState('');

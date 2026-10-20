@@ -227,7 +227,7 @@ async def copilot_chat(messages: List[Dict[str, str]], lesion_context: Dict[str,
         }
 
     system_prompt = (
-        "You are the SkinLesionNet Clinical Copilot, a helpful, knowledgeable, and empathetic dermatology assistant. "
+        "You are the LesionLens Clinical Copilot, a helpful, knowledgeable, and empathetic dermatology assistant. "
         "You have access to the specific patient's lesion analysis:\n"
         f"Context: {json.dumps(lesion_context, ensure_ascii=False)}\n\n"
         "Guidelines:\n"

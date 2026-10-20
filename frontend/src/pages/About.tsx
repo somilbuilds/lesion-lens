@@ -34,7 +34,7 @@ export default function About() {
       <header className="evidence-hero">
         <span className="eyebrow"><BookOpen size={14} /> MODEL & EVIDENCE</span>
         <h1>Know what the model can tell you.</h1>
-        <p>SkinLesionNet is an image-classification research project. This page separates the recorded experiment from what has been verified about it.</p>
+        <p>LesionLens is an image-classification research project. This page separates the recorded experiment from what has been verified about it.</p>
       </header>
 
       <section className="evidence-callout">

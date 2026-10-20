@@ -1,6 +1,6 @@
 export const translations: Record<string, Record<string, string>> = {
   en: {
-    appTitle: "SkinLesion",
+    appTitle: "Lesion",
     analyze: "Analyze",
     about: "Research & evidence",
     historyTab: "History",
@@ -150,7 +150,7 @@ export const translations: Record<string, Record<string, string>> = {
     modelContextIgnored: "This checkpoint is image-only. Optional age, sex and location did not change these scores.",
   },
   hi: {
-    appTitle: "SkinLesion",
+    appTitle: "Lesion",
     analyze: "जाँच करें (Analyze)",
     about: "शोध और साक्ष्य",
     historyTab: "इतिहास",
