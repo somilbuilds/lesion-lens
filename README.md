@@ -86,6 +86,31 @@ npm install
 npm run dev
 ```
 
+---
+
+## Zero-Cost Hybrid Deployment (Laptop Compute + Render Frontend)
+
+You can run your heavy PyTorch and OpenCV models on your laptop for free, while Render hosts the static React frontend accessible to anyone on the web.
+
+When you run the CI/CD bridge script:
+1. It verifies/starts your local FastAPI backend on a flexible port (`BACKEND_PORT=8000`).
+2. Creates an encrypted **Cloudflare Tunnel** (`*.trycloudflare.com`).
+3. Uses the **Render REST API** with your `RENDER_API_KEY` to update `VITE_API_BASE_URL` on your Render static site and trigger a build.
+4. Provides an **Instant Access URL** (`https://lesion-lens-1.onrender.com/?backend=<tunnel_url>`) so you can test immediately without waiting for Render's build to finish!
+5. Preserves your local Vite dev server (`http://localhost:5173`) so you can run both simultaneously.
+
+### Running the Bridge:
+```powershell
+# PowerShell shortcut:
+.\run_tunnel.ps1
+
+# Or with custom ports / flags:
+.\run_tunnel.ps1 -Port 8000 -StartFrontend
+
+# Or with Python directly:
+python scripts/connect_render.py --port 8000
+```
+
 ### Groq API Configuration (Optional)
 To enable the interactive Clinical AI Copilot, copy `.env.example` to `.env` and add your Groq API key:
 ```env

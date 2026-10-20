@@ -1,18 +1,42 @@
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
+function resolveApiBase(): string {
+  // 1. Check if URL has ?backend=https://... or ?api=https://...
+  if (typeof window !== 'undefined' && window.location) {
+    const params = new URLSearchParams(window.location.search);
+    const paramUrl = params.get('backend') || params.get('api');
+    if (paramUrl) {
+      try {
+        const parsed = new URL(paramUrl);
+        const origin = parsed.origin;
+        localStorage.setItem('skinlesion_backend_override', origin);
+        return origin;
+      } catch {
+        // ignore invalid URL
+      }
+    }
+    // 2. Check saved localStorage override from a previous session
+    const stored = localStorage.getItem('skinlesion_backend_override');
+    if (stored) return stored;
+  }
 
-// In local development, use Vite's same-origin proxy so localhost/127.0.0.1
-// resolution and browser CORS settings cannot break calls to the local backend.
-// Deployed frontends must explicitly configure their backend URL.
-export const API_BASE = configuredApiBase || '';
+  // 3. Built-in Render environment variable from build time
+  const configured = import.meta.env.VITE_API_BASE_URL;
+  if (configured) return configured.replace(/\/+$/, '');
+
+  // 4. Default: empty string (same-origin / Vite proxy for local development)
+  return '';
+}
+
+export const API_BASE = resolveApiBase();
 
 function getApiUrl(path: string) {
-  if (!API_BASE && !import.meta.env.DEV) {
+  const base = resolveApiBase();
+  if (!base && !import.meta.env.DEV) {
     throw new Error(
-      'Backend URL is not configured. Set VITE_API_BASE_URL in the frontend deployment environment and rebuild.'
+      'Backend URL is not configured. Start your local tunnel or pass ?backend=https://your-tunnel.trycloudflare.com in the URL.'
     );
   }
 
-  return API_BASE ? `${API_BASE}${path}` : path;
+  return base ? `${base}${path}` : path;
 }
 
 export async function fetchHealth() {
